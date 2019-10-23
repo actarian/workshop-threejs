@@ -1,0 +1,75 @@
+.example-03 {
+
+	main {
+		// padding: calc(50vh - 20px) 0;
+	}
+
+	.world {
+		position: fixed;
+		width: 100vw;
+		height: 100vh;
+		left: 0;
+		top: 0;
+		z-index: 1;
+		pointer-events: none;
+	}
+
+	.section {
+		position: relative;
+
+		.container {
+			height: calc(100vh - 80px);
+			display: flex;
+			justify-content: center;
+			align-items: center;
+
+			&>.title {
+				position: relative;
+				text-align: center;
+				font-size: 9vw;
+				line-height: 0.8;
+				font-weight: 600;
+				color: white;
+
+				@include media-breakpoint-up(xl) {
+					font-size: 172px;
+				}
+			}
+		}
+
+		.model-container {
+			position: relative;
+		}
+
+		[title] {
+
+			.word,
+			.char {
+				display: inline-block;
+			}
+		}
+
+		[model] {
+			position: absolute;
+			top: 25%;
+			width: 25%;
+			height: 50%;
+			pointer-events: none;
+			background: rgba(255, 0, 0, 0.1);
+		}
+
+		&:nth-child(odd) {
+			[model] {
+				left: 12.5%;
+			}
+		}
+
+		&:nth-child(even) {
+			[model] {
+				right: 12.5%;
+			}
+		}
+
+	}
+
+}
