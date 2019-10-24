@@ -1,6 +1,6 @@
 /* jshint esversion: 6 */
 
-import Rect from '../dom/rect';
+import Rect from '../rect/rect';
 
 export default class Camera extends THREE.PerspectiveCamera {
 

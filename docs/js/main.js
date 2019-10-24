@@ -17078,7 +17078,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
-var _rect = _interopRequireDefault(require("../dom/rect"));
+var _rect = _interopRequireDefault(require("../rect/rect"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -17109,12 +17109,13 @@ class Camera extends THREE.PerspectiveCamera {
 
 exports.default = Camera;
 
-},{"../dom/rect":206}],202:[function(require,module,exports){
+},{"../rect/rect":215}],202:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.hexToInt = hexToInt;
 exports.randomHex = randomHex;
 exports.randomColor = randomColor;
 exports.nextHex = nextHex;
@@ -17173,13 +17174,17 @@ const colors = [{
 }];
 exports.colors = colors;
 
+function hexToInt(hex) {
+  return parseInt(hex.replace(/^#/, ''), 16);
+}
+
 function randomHex() {
   return colors[Math.floor(Math.random() * colors.length)].hex;
 }
 
 function randomColor() {
   const hex = randomHex();
-  return parseInt(hex.replace(/^#/, ''), 16);
+  return hexToInt(hex);
 }
 
 let index = -1;
@@ -17191,332 +17196,10 @@ function nextHex() {
 
 function nextColor() {
   const hex = nextHex();
-  return parseInt(hex.replace(/^#/, ''), 16);
+  return hexToInt(hex);
 }
 
 },{}],203:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _colors = require("../colors/colors");
-
-var _ease = _interopRequireDefault(require("../ease/ease"));
-
-var _dom = _interopRequireDefault(require("./dom.service"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/* jshint esversion: 6 */
-const deg = THREE.Math.degToRad;
-
-const domService = _dom.default.singleton();
-
-class DomModel {
-  constructor(node, options) {
-    if (!options) {
-      return console.error('DomModel options undefiend!');
-    }
-
-    if (!options.world) {
-      return console.error('DomModel options.world undefiend!');
-    }
-
-    this.node = node;
-    Object.assign(this, options);
-    this.scale = new THREE.Vector3();
-    this.position = new THREE.Vector3();
-    this.create(model => this.loaded(model));
-  }
-
-  create(callback) {
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshStandardMaterial({
-      color: (0, _colors.nextColor)(),
-      roughness: 0.4,
-      metalness: 0.01
-    });
-    const model = new THREE.Mesh(geometry, material);
-
-    if (typeof callback === 'function') {
-      callback(model);
-    }
-
-    return model;
-  }
-
-  loaded(model) {
-    this.model = model;
-
-    model.userData.render = (time, tick) => {
-      if (this.intersection) {
-        this.render(this, time, tick);
-      }
-    };
-
-    const world = this.world;
-    world.scene.add(model);
-    const node = this.node;
-    domService.scrollIntersection$(node).subscribe(event => {
-      this.intersection = event.intersection;
-      this.windowRect = event.windowRect;
-      this.cameraRect = world.camera.cameraRect;
-      this.calculateScaleAndPosition();
-    });
-  }
-
-  calculateScaleAndPosition() {
-    const intersection = this.intersection;
-    const windowRect = this.windowRect;
-    const cameraRect = this.cameraRect;
-    const sx = intersection.width / windowRect.width * cameraRect.width;
-    const sy = intersection.height / windowRect.height * cameraRect.height;
-    this.scale.set(sx, sx, sx);
-    const tx = intersection.x * cameraRect.width / windowRect.width - cameraRect.width / 2;
-    const ty = intersection.y * cameraRect.height / windowRect.height - cameraRect.height / 2;
-    this.position.set(tx, -ty, 0);
-  }
-
-  render(time, tick) {
-    const model = this.model;
-    const scale = this.scale;
-    model.scale.set(scale.x, scale.y, scale.z);
-    const position = this.position;
-    model.position.set(position.x, position.y, position.z);
-    const pow = this.pow();
-    model.rotation.x = deg(180) * pow;
-    model.rotation.y = deg(360) * pow;
-  }
-
-  getScroll(offset) {
-    const scroll = this.intersection.scroll(offset); // console.log(scroll);
-
-    return scroll;
-  }
-
-  getPow(offset) {
-    let pow = Math.min(0.0, this.intersection.offset(offset)) + 1;
-    pow = Math.max(0.0, pow);
-    pow = _ease.default.Sine.InOut(pow);
-    pow -= 1;
-    return pow;
-  }
-
-}
-
-exports.default = DomModel;
-
-},{"../colors/colors":202,"../ease/ease":207,"./dom.service":205}],204:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _ease = _interopRequireDefault(require("../ease/ease"));
-
-var _dom = _interopRequireDefault(require("./dom.service"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/* jshint esversion: 6 */
-const USE_SHADER_MATERIAL = true;
-const vertexShader =
-/* glsl */
-`
-varying vec2 vUv;
-uniform float uTime;
-uniform float uPow;
-uniform float uSpeed;
-
-void main() {
-	vUv = uv;
-	vec3 vPosition = position;
-	float s = uSpeed * -0.05;
-	vPosition.y += cos(uv.x - 0.5) * s - s;
-	gl_Position = projectionMatrix * modelViewMatrix * vec4(vPosition, 1.0);
-}
-`;
-const fragmentShader =
-/* glsl */
-`
-uniform sampler2D uImage;
-uniform float uOpacity;
-varying vec2 vUv;
-void main() {
-	vec4 color = texture2D(uImage, vUv);
-	color.a *= uOpacity;
-	if (color.a < 0.01) discard;
-	gl_FragColor = color;
-	gl_FragColor.rgb *= gl_FragColor.a;
-}
-`;
-const deg = THREE.Math.degToRad;
-
-const domService = _dom.default.singleton();
-
-const geometry = new THREE.PlaneBufferGeometry(1, 1, 20, 20);
-
-class DomPicture {
-  constructor(node, options) {
-    if (!options) {
-      return console.error('DomPicture options undefiend!');
-    }
-
-    if (!options.world) {
-      return console.error('DomPicture options.world undefiend!');
-    }
-
-    this.node = node;
-    Object.assign(this, options);
-    this.speed = 0;
-    this.scale = new THREE.Vector3();
-    this.position = new THREE.Vector3();
-    this.create(picture => this.loaded(picture));
-  }
-
-  create(callback) {
-    const loader = new THREE.TextureLoader();
-    const texture = loader.load(this.node.getAttribute('src'), texture => {
-      texture.anisotropy = this.world.renderer.capabilities.getMaxAnisotropy();
-      const material = USE_SHADER_MATERIAL ? this.getShaderMaterial(texture) : this.getMaterial(texture);
-      const picture = new THREE.Mesh(geometry, material);
-
-      if (typeof callback === 'function') {
-        callback(picture);
-      }
-    });
-  }
-
-  getShaderMaterial(texture) {
-    const material = new THREE.ShaderMaterial({
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
-      uniforms: {
-        uImage: {
-          type: 't',
-          value: texture
-        },
-        uOpacity: {
-          type: 'f',
-          value: 1
-        },
-        uTime: {
-          type: 'f',
-          value: performance.now()
-        },
-        uSpeed: {
-          type: 'f',
-          value: 0
-        },
-        uPow: {
-          type: 'f',
-          value: 0
-        },
-        uResolution: {
-          type: 'v2',
-          value: new THREE.Vector2(window.innerWidth, window.innerHeight).multiplyScalar(window.devicePixelRatio)
-        }
-      },
-      side: THREE.DoubleSide
-    });
-    return material;
-  }
-
-  getMaterial(texture) {
-    const material = new THREE.MeshBasicMaterial({
-      map: texture,
-      color: 0xffffff,
-      transparent: true,
-      opacity: 1.0,
-      alphaTest: 0.01,
-      side: THREE.DoubleSide
-    });
-    return material;
-  }
-
-  loaded(picture) {
-    this.picture = picture;
-
-    picture.userData.render = (time, tick) => {
-      if (this.intersection) {
-        this.update(this, time, tick);
-        this.render(this, time, tick);
-      }
-    };
-
-    const world = this.world;
-    world.scene.add(picture);
-    const node = this.node;
-    domService.scrollIntersection$(node).subscribe(event => {
-      this.scroll = event.scroll;
-      this.intersection = event.intersection;
-      this.windowRect = event.windowRect;
-      this.cameraRect = world.camera.cameraRect;
-      this.calculateScaleAndPosition();
-    });
-  }
-
-  calculateScaleAndPosition() {
-    const scroll = this.scroll;
-    const intersection = this.intersection;
-    const windowRect = this.windowRect;
-    const cameraRect = this.cameraRect;
-    this.speed += (this.scroll.speed - this.speed) / 8;
-    const sx = intersection.width / windowRect.width * cameraRect.width;
-    const sy = intersection.height / windowRect.height * cameraRect.height;
-    this.scale.set(sx, sy, 1);
-    const tx = intersection.x * cameraRect.width / windowRect.width - cameraRect.width / 2;
-    const ty = intersection.y * cameraRect.height / windowRect.height - cameraRect.height / 2;
-    this.position.set(tx, -ty, 0);
-  }
-
-  update(domPicture, time, tick) {
-    const picture = domPicture.picture;
-
-    if (USE_SHADER_MATERIAL) {
-      picture.material.uniforms.uTime.value = time;
-      picture.material.uniforms.uOpacity.value = 1;
-      picture.material.uniforms.uSpeed.value = domPicture.speed;
-    } else {
-      picture.material.opacity = 1;
-    }
-  }
-
-  render(domPicture, time, tick) {
-    const picture = domPicture.picture;
-    const scale = domPicture.scale;
-    picture.scale.set(scale.x, scale.y, scale.z);
-    const position = domPicture.position;
-    picture.position.set(position.x, position.y, position.z);
-    const pow = domPicture.pow();
-    picture.rotation.x = deg(180) * pow;
-    picture.rotation.y = deg(360) * pow;
-  }
-
-  getScroll(offset) {
-    const scroll = this.intersection.scroll(offset); // console.log(scroll);
-
-    return scroll;
-  }
-
-  getPow(offset) {
-    let pow = Math.min(0.0, this.intersection.offset(offset)) + 1;
-    pow = Math.max(0.0, pow);
-    pow = _ease.default.Sine.InOut(pow);
-    pow -= 1;
-    return pow;
-  }
-
-}
-
-exports.default = DomPicture;
-
-},{"../ease/ease":207,"./dom.service":205}],205:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17533,7 +17216,7 @@ var _animationFrame = require("rxjs/internal/scheduler/animationFrame");
 
 var _operators = require("rxjs/operators");
 
-var _rect = _interopRequireDefault(require("./rect"));
+var _rect = _interopRequireDefault(require("../rect/rect"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -18056,172 +17739,7 @@ DomService.scroll$ = function () {
 
 DomService.scrollAndRect$ = (0, _rxjs.combineLatest)(DomService.scroll$, DomService.windowRect$);
 
-},{"./rect":206,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],206:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-/* jshint esversion: 6 */
-class Rect {
-  constructor(rect) {
-    this.x = 0;
-    this.y = 0;
-    this.top = 0;
-    this.right = 0;
-    this.bottom = 0;
-    this.left = 0;
-    this.width = 0;
-    this.height = 0;
-    this.set(rect);
-  }
-
-  static contains(rect, left, top) {
-    return rect.top <= top && top <= rect.bottom && rect.left <= left && left <= rect.right;
-  }
-
-  static intersectRect(r1, r2) {
-    return !(r2.left > r1.right || r2.right < r1.left || r2.top > r1.bottom || r2.bottom < r1.top);
-  }
-
-  static fromNode(node) {
-    if (!node) {
-      return;
-    }
-
-    const rect = node.rect_ || (node.rect_ = new Rect());
-    const rects = node.getClientRects();
-
-    if (!rects.length) {
-      // console.log(rects, node);
-      return rect;
-    }
-
-    const boundingRect = node.getBoundingClientRect(); // rect.top: boundingRect.top + defaultView.pageYOffset,
-    // rect.left: boundingRect.left + defaultView.pageXOffset,
-
-    rect.x = boundingRect.left;
-    rect.y = boundingRect.top;
-    rect.top = boundingRect.top;
-    rect.left = boundingRect.left;
-    rect.width = boundingRect.width;
-    rect.height = boundingRect.height;
-    rect.right = rect.left + rect.width;
-    rect.bottom = rect.top + rect.height;
-    rect.setCenter();
-    return rect;
-  }
-
-  set(rect) {
-    if (rect) {
-      Object.assign(this, rect);
-      this.right = this.left + this.width;
-      this.bottom = this.top + this.height;
-    }
-
-    this.setCenter();
-  }
-
-  setCenter() {
-    const center = this.center || (this.center = {});
-    center.top = this.top + this.height / 2;
-    center.left = this.left + this.width / 2;
-    center.x = center.left;
-    center.y = center.top;
-  }
-
-  contains(left, top) {
-    return Rect.contains(this, left, top);
-  }
-
-  intersect(rect) {
-    return Rect.intersectRect(this, rect);
-  }
-
-  intersection(rect, mode = 1) {
-    const intersection = this.intersection_ || (this.intersection_ = {
-      left: 0,
-      top: 0,
-      width: 0,
-      height: 0,
-      x: 0,
-      y: 0,
-      pow: {
-        x: -1,
-        y: -1
-      },
-      offset: function (offset, mode) {
-        offset = offset || 0;
-        let min, max;
-
-        if (mode === 1) {
-          min = -this.height;
-          max = this.rect.height + this.height;
-        } else {
-          min = this.rect.height * 0.1;
-          max = this.rect.height - this.height;
-        }
-
-        let pow = 0.5 - (this.top + offset - min) / max; // pow = Math.max(0, Math.min(1, pow));
-
-        return pow;
-      },
-      scroll: function (offset) {
-        offset = offset || 0;
-        let min, max;
-        min = -this.height;
-        max = this.rect.height + this.height;
-        let scroll = 0.5 - (this.top + offset - min) / max; // scroll = Math.max(0, Math.min(1, scroll));
-
-        return scroll + 0.5;
-      }
-    });
-    intersection.left = this.left;
-    intersection.top = this.top;
-    intersection.width = this.width;
-    intersection.height = this.height;
-    intersection.x = this.left + this.width / 2;
-    intersection.y = this.top + this.height / 2;
-    intersection.rect = rect;
-    const pow = intersection.offset(0, mode);
-    intersection.pow.y = pow;
-    return intersection;
-  }
-
-  intersection___(rect) {
-    const center = {
-      x: (this.center.x - rect.center.x) / (rect.width / 2),
-      y: (this.center.y - rect.center.y) / (rect.height / 2)
-    };
-
-    if (this.intersect(rect)) {
-      const dx = this.left > rect.left ? 0 : Math.abs(rect.left - this.left);
-      const dy = this.top > rect.top ? 0 : Math.abs(rect.top - this.top);
-      let x = dx ? 1 - dx / this.width : (rect.left + rect.width - this.left) / this.width;
-      let y = dy ? 1 - dy / this.height : (rect.top + rect.height - this.top) / this.height;
-      x = Math.min(1, x);
-      y = Math.min(1, y);
-      return {
-        x: x,
-        y: y,
-        center: center
-      };
-    } else {
-      return {
-        x: 0,
-        y: 0,
-        center: center
-      };
-    }
-  }
-
-}
-
-exports.default = Rect;
-
-},{}],207:[function(require,module,exports){
+},{"../rect/rect":215,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],204:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18489,7 +18007,7 @@ const outBounce = Ease.Bounce.Out;
 var _default = Ease;
 exports.default = _default;
 
-},{}],208:[function(require,module,exports){
+},{}],205:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18502,16 +18020,39 @@ var _colors = require("../colors/colors");
 /* jshint esversion: 6 */
 class Example01 {
   constructor(container) {
-    this.container = container;
+    this.container = container; // SCENE
+
     const scene = this.scene = new THREE.Scene();
     scene.background = new THREE.Color((0, _colors.randomColor)()); // scene.fog = new THREE.Fog(scene.background, 0, 50);
+    // CAMERA
 
     const camera = this.camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.01, 2000);
     camera.position.set(0, 0, 5);
     camera.target = new THREE.Vector3();
     camera.zoom = 1;
     camera.updateProjectionMatrix();
-    scene.add(camera);
+    scene.add(camera); // LIGHT
+
+    const light = new THREE.PointLight((0, _colors.randomColor)(), 1.0);
+    light.position.set(0, 10, 5);
+    /*
+    light.userData.render = (time, tick) => {
+    	light.position.y = Math.cos(tick * Math.PI / 180) * 10;
+    };
+    */
+
+    scene.add(light); // RENDERER
+
+    const renderer = this.renderer = new THREE.WebGLRenderer({
+      antialias: true // alpha: true,
+      // premultipliedAlpha: true,
+      // preserveDrawingBuffer: false,
+
+    });
+    renderer.setClearColor((0, _colors.randomColor)(), 1);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement); // MODEL
+
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshStandardMaterial({
       color: (0, _colors.randomColor)(),
@@ -18526,26 +18067,10 @@ class Example01 {
     };
     */
 
-    scene.add(cube);
-    const light = new THREE.PointLight((0, _colors.randomColor)(), 1.0);
-    light.position.set(0, 10, 5);
-    /*
-    light.userData.render = (time, tick) => {
-    	light.position.y = Math.cos(tick * Math.PI / 180) * 10;
-    };
-    */
+    scene.add(cube); // LISTENERS
 
-    scene.add(light);
-    const renderer = this.renderer = new THREE.WebGLRenderer({
-      antialias: true // alpha: true,
-      // premultipliedAlpha: true,
-      // preserveDrawingBuffer: false,
+    this.addListeners(); // ANIMATION LOOP
 
-    });
-    renderer.setClearColor((0, _colors.randomColor)(), 1);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer.domElement);
-    this.addListeners();
     this.animate();
   }
 
@@ -18599,7 +18124,7 @@ class Example01 {
 
 exports.default = Example01;
 
-},{"../colors/colors":202}],209:[function(require,module,exports){
+},{"../colors/colors":202}],206:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18609,61 +18134,30 @@ exports.default = void 0;
 
 var _colors = require("../colors/colors");
 
+var _texture = _interopRequireDefault(require("../texture/texture"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 /* jshint esversion: 6 */
 class Example01 {
   constructor(container) {
-    this.container = container;
+    this.container = container; // SCENE
+
     const scene = this.scene = new THREE.Scene();
     scene.background = new THREE.Color((0, _colors.randomColor)()); // scene.fog = new THREE.Fog(scene.background, 0, 50);
+    // CAMERA
 
     const camera = this.camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.01, 2000);
     camera.position.set(0, 0, 5);
     camera.target = new THREE.Vector3();
     camera.zoom = 1;
     camera.updateProjectionMatrix();
-    scene.add(camera);
-    const fbxLoader = new THREE.FBXLoader();
-    fbxLoader.load('./three/models/latte-corpo/latte-corpo.fbx', model => {
-      const textureLoader = new THREE.TextureLoader();
-      const corpo = new THREE.MeshStandardMaterial({
-        color: (0, _colors.randomColor)(),
-        roughness: 0.4,
-        metalness: 0.01,
-        map: textureLoader.load('./three/models/latte-corpo/latte-corpo.jpg', texture => {
-          texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-        })
-      });
-      const tappo = new THREE.MeshStandardMaterial({
-        color: (0, _colors.randomColor)(),
-        roughness: 0.4,
-        metalness: 0.01
-      });
-      model.traverse(child => {
-        if (child instanceof THREE.Mesh) {
-          if (child.name === 'corpo') {
-            child.material = corpo.clone();
-          } else {
-            child.material = tappo.clone();
-          } // console.log(child.name, child.material);
+    scene.add(camera); // LIGHT
 
-        }
-      });
-
-      model.userData.render = (time, tick) => {
-        model.scale.set(0.3, 0.3, 0.3);
-        model.rotation.x = Math.PI / 180 * 15;
-        model.rotation.y += 0.01;
-      };
-
-      scene.add(model);
-    }, xhr => {
-      console.log('fbx progress', Math.round(xhr.loaded / xhr.total * 100) + '%');
-    }, error => {
-      console.log('fbx loader error', error);
-    });
-    const light = new THREE.HemisphereLight((0, _colors.randomColor)(), (0, _colors.randomColor)(), 1.0);
+    const light = new THREE.HemisphereLight((0, _colors.randomColor)(), (0, _colors.randomColor)(), 0.65);
     light.position.set(0, 10, 0);
-    scene.add(light);
+    scene.add(light); // RENDERER
+
     const renderer = this.renderer = new THREE.WebGLRenderer({
       antialias: true // alpha: true,
       // premultipliedAlpha: true,
@@ -18672,8 +18166,52 @@ class Example01 {
     });
     renderer.setClearColor((0, _colors.randomColor)(), 1);
     renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer.domElement);
-    this.addListeners();
+    container.appendChild(renderer.domElement); // MODEL (FBX LOADER)
+
+    const fbxLoader = new THREE.FBXLoader();
+    fbxLoader.load('./three/models/latte-corpo/latte-corpo.fbx', object => {
+      const materialCorpo = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.3,
+        metalness: 0.03,
+        map: _texture.default.load('./three/models/latte-corpo/latte-corpo.jpg', renderer)
+      });
+      const materialTappo = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.3,
+        metalness: 0.03
+      });
+      object.traverse(child => {
+        if (child instanceof THREE.Mesh) {
+          if (child.name === 'corpo') {
+            child.material = materialCorpo;
+          } else {
+            child.material = materialTappo;
+          } // console.log(child.name, child.material);
+
+        }
+      });
+
+      object.userData.render = (time, tick) => {
+        object.scale.set(0.3, 0.3, 0.3);
+        object.rotation.x = Math.PI / 180 * 15;
+        object.rotation.y += 0.01;
+      };
+
+      _texture.default.loadEquirectangularToCube('./three/environment/environment-10.jpg', renderer, (texture, backgroundTexture) => {
+        _texture.default.setEnvMap(texture, materialCorpo, materialTappo);
+
+        scene.add(object);
+      }); // scene.add(object);
+
+    }, xhr => {
+      console.log('fbx progress', Math.round(xhr.loaded / xhr.total * 100) + '%');
+    }, error => {
+      console.log('fbx loader error', error);
+    }); // LISTENERS
+
+    this.addListeners(); // ANIMATION LOOP
+
     this.animate();
   }
 
@@ -18727,7 +18265,7 @@ class Example01 {
 
 exports.default = Example01;
 
-},{"../colors/colors":202}],210:[function(require,module,exports){
+},{"../colors/colors":202,"../texture/texture":218}],207:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18737,7 +18275,7 @@ exports.default = void 0;
 
 var _colors = require("../colors/colors");
 
-var _dom = _interopRequireDefault(require("../dom/dom.model"));
+var _model = _interopRequireDefault(require("../model/model"));
 
 var _world = _interopRequireDefault(require("../world/world"));
 
@@ -18748,27 +18286,30 @@ const deg = THREE.Math.degToRad;
 
 class Example03 {
   constructor(container) {
-    this.container = container;
+    this.container = container; // RANDOM COLOR TO SECTIONS
+
     const sections = [...document.querySelectorAll('.section')].forEach(node => {
       node.style.backgroundColor = (0, _colors.nextHex)();
-    });
-    const world = new _world.default(container, world => {
-      const models = [...document.querySelectorAll('[model]')].map((node, index) => {
-        const model = new _dom.default(node, {
-          world: world,
-          render: (domModel, time, tick) => {
-            const model = domModel.model;
-            const scroll = domModel.getScroll();
-            model.rotation.x = deg(180) * scroll; // model.rotation.y = deg(180) * scroll;
+    }); // WORLD
 
-            const scale = domModel.scale;
-            model.scale.set(scale.x, scale.y, scale.z);
-            const position = domModel.position; // model.position.set(position.x, position.y + 2.5 - scroll * 5, position.z);
+    const world = new _world.default(container, world => {
+      // MODELS
+      const models = [...document.querySelectorAll('[model]')].map((node, index) => {
+        const model = new _model.default(node, {
+          world: world,
+          render: (instance, time, tick) => {
+            const mesh = instance.mesh;
+            const scroll = instance.getScroll();
+            mesh.rotation.x = deg(180) * scroll; // mesh.rotation.y = deg(180) * scroll;
+
+            const scale = instance.scale;
+            mesh.scale.set(scale.x, scale.y, scale.z);
+            const position = instance.position; // mesh.position.set(position.x, position.y + 2.5 - scroll * 5, position.z);
 
             if (index % 2 === 0) {
-              model.position.set(position.x + 2.5 - scroll * 5, position.y, position.z);
+              mesh.position.set(position.x + 2.5 - scroll * 5, position.y, position.z);
             } else {
-              model.position.set(position.x - 2.5 + scroll * 5, position.y, position.z);
+              mesh.position.set(position.x - 2.5 + scroll * 5, position.y, position.z);
             }
           }
         });
@@ -18781,7 +18322,7 @@ class Example03 {
 
 exports.default = Example03;
 
-},{"../colors/colors":202,"../dom/dom.model":203,"../world/world":221}],211:[function(require,module,exports){
+},{"../colors/colors":202,"../model/model":211,"../world/world":221}],208:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18789,63 +18330,9 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
-var _colors = require("../colors/colors");
+var _picture = _interopRequireDefault(require("../picture/picture.shader"));
 
-var _dom = _interopRequireDefault(require("../dom/dom.picture"));
-
-var _world = _interopRequireDefault(require("../world/world"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/* jshint esversion: 6 */
-const deg = THREE.Math.degToRad;
-
-class Example04 {
-  constructor(container) {
-    this.container = container;
-    const sections = [...document.querySelectorAll('.section')].forEach(node => {
-      node.style.backgroundColor = (0, _colors.nextHex)();
-    });
-    const world = new _world.default(container, world => {
-      const pictures = [...document.querySelectorAll('[picture]')].map((node, index) => {
-        const picture = new _dom.default(node, {
-          world: world,
-          render: (domPicture, time, tick) => {
-            const picture = domPicture.picture;
-            const scroll = domPicture.getScroll(); // picture.rotation.x = deg(90) + deg(180) * scroll;
-            // picture.rotation.y = deg(180) * scroll;
-
-            const scale = domPicture.scale;
-            picture.scale.set(scale.x, scale.y, scale.z);
-            const position = domPicture.position;
-            picture.position.set(position.x, position.y, position.z);
-            /*
-            if (index % 2 === 0) {
-            	picture.position.set(position.x + 2.5 - scroll * 5, position.y, position.z);
-            } else {
-            	picture.position.set(position.x - 2.5 + scroll * 5, position.y, position.z);
-            }
-            */
-          }
-        });
-        return picture;
-      });
-    });
-  }
-
-}
-
-exports.default = Example04;
-
-},{"../colors/colors":202,"../dom/dom.picture":204,"../world/world":221}],212:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _model = _interopRequireDefault(require("../model/model"));
+var _plane = _interopRequireDefault(require("../plane/plane"));
 
 var _title = _interopRequireDefault(require("../title/title"));
 
@@ -18854,26 +18341,53 @@ var _world = _interopRequireDefault(require("../world/world"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /* jshint esversion: 6 */
-class Example10 {
+// import { nextHex } from '../colors/colors';
+const deg = THREE.Math.degToRad;
+
+class Example04 {
   constructor(container) {
-    this.container = container;
-    const world = new _world.default(container, world => {
-      const models = [...document.querySelectorAll('[model]')].map(node => {
-        const model = new _model.default(node, world);
-        return model;
-      });
-      const titles = [...document.querySelectorAll('[title]')].map(node => {
-        const title = new _title.default(node);
-        return title;
-      });
+    this.container = container; // RANDOM COLOR TO SECTIONS
+
+    /*
+    const sections = [...document.querySelectorAll('.section')].forEach(node => {
+    	node.style.backgroundColor = nextHex();
     });
+    */
+    // WORLD
+
+    const world = new _world.default(container, world => {
+      console.log(world); // PLANES
+
+      const planes = [...document.querySelectorAll('[plane]')].map((node, index) => {
+        const plane = new _plane.default(node, {
+          world: world
+        });
+        return plane;
+      }); // PICTURES
+
+      const pictures = [...document.querySelectorAll('[picture]')].map((node, index) => {
+        const picture = new _picture.default(node, {
+          world: world,
+          render: (instance, time, tick) => {
+            const mesh = instance.mesh;
+            const scale = instance.scale;
+            mesh.scale.set(scale.x, scale.y, scale.z);
+            const position = instance.position;
+            mesh.position.set(position.x, position.y, position.z);
+          }
+        });
+        return picture;
+      });
+    }); // TITLES
+
+    const titles = [...document.querySelectorAll('[title]')].map(node => new _title.default(node));
   }
 
 }
 
-exports.default = Example10;
+exports.default = Example04;
 
-},{"../model/model":216,"../title/title":220,"../world/world":221}],213:[function(require,module,exports){
+},{"../picture/picture.shader":213,"../plane/plane":214,"../title/title":220,"../world/world":221}],209:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18898,7 +18412,7 @@ class Lights extends THREE.Group {
 
 exports.default = Lights;
 
-},{}],214:[function(require,module,exports){
+},{}],210:[function(require,module,exports){
 "use strict";
 
 var _example = _interopRequireDefault(require("./examples/example-01"));
@@ -18909,8 +18423,6 @@ var _example3 = _interopRequireDefault(require("./examples/example-03"));
 
 var _example4 = _interopRequireDefault(require("./examples/example-04"));
 
-var _example5 = _interopRequireDefault(require("./examples/example-10"));
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /* jshint esversion: 6 */
@@ -18918,9 +18430,8 @@ window.Example01 = _example.default;
 window.Example02 = _example2.default;
 window.Example03 = _example3.default;
 window.Example04 = _example4.default;
-window.Example10 = _example5.default;
 
-},{"./examples/example-01":208,"./examples/example-02":209,"./examples/example-03":210,"./examples/example-04":211,"./examples/example-10":212}],215:[function(require,module,exports){
+},{"./examples/example-01":205,"./examples/example-02":206,"./examples/example-03":207,"./examples/example-04":208}],211:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18928,204 +18439,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
-/* jshint esversion: 6 */
-const ENV_MAP_INTENSITY = 1.5;
-
-class Materials {
-  constructor(renderer, callback) {
-    this.renderer = renderer;
-    const textures = this.textures = this.addTextures();
-    const white = this.white = this.getWhite();
-    const transparent = this.transparent = this.getTransparent();
-    const black = this.black = this.getBlack();
-    const docciaSchiuma = this.docciaSchiuma = this.getDocciaSchiuma();
-    const gelMousseDoccia = this.gelMousseDoccia = this.getGelMousseDoccia();
-    const intimoAttivo = this.intimoAttivo = this.getIntimoAttivo();
-    const latteCorpo = this.latteCorpo = this.getLatteCorpo();
-    this.getEquirectangular('three/environment/environment-04.jpg', (texture, backgroundTexture) => {
-      textures.environment = texture;
-      white.envMap = texture;
-      white.needsUpdate = true;
-      transparent.envMap = texture;
-      transparent.needsUpdate = true;
-      black.envMap = texture;
-      black.needsUpdate = true;
-      docciaSchiuma.envMap = texture;
-      docciaSchiuma.needsUpdate = true;
-      gelMousseDoccia.envMap = texture;
-      gelMousseDoccia.needsUpdate = true;
-      intimoAttivo.envMap = texture;
-      intimoAttivo.needsUpdate = true;
-      latteCorpo.envMap = texture;
-      latteCorpo.needsUpdate = true;
-
-      if (typeof callback === 'function') {
-        callback(this);
-      }
-    });
-  }
-
-  addTextures() {
-    const loader = new THREE.TextureLoader();
-    const textures = {
-      docciaSchiuma: loader.load('three/models/doccia-schiuma/doccia-schiuma.jpg', texture => {
-        texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-      }),
-      gelMousseDoccia: loader.load('three/models/gel-mousse-doccia/gel-mousse-doccia.jpg', texture => {
-        texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-      }),
-      intimoAttivo: loader.load('three/models/intimo-attivo/intimo-attivo.jpg', texture => {
-        texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-      }),
-      latteCorpo: loader.load('three/models/latte-corpo/latte-corpo.jpg', texture => {
-        texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-      }),
-      noise: loader.load('three/noise/noise.png', texture => {
-        texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-      })
-    };
-    this.loader = loader;
-    return textures;
-  }
-
-  getWhite() {
-    let material;
-    material = new THREE.MeshStandardMaterial({
-      name: 'white',
-      color: 0xf4f4f6,
-      roughness: 0.45,
-      metalness: 0.01,
-      envMapIntensity: ENV_MAP_INTENSITY,
-      side: THREE.FrontSide
-    });
-    return material;
-  }
-
-  getTransparent() {
-    let material;
-    material = new THREE.MeshStandardMaterial({
-      name: 'transparent',
-      color: 0xaaaaaa,
-      roughness: 0.05,
-      metalness: 0.05,
-      opacity: 0.4,
-      transparent: true,
-      alphaTest: 0.3,
-      envMapIntensity: ENV_MAP_INTENSITY * 2,
-      side: THREE.FrontSide
-    });
-    return material;
-  }
-
-  getBlack() {
-    let material;
-    material = new THREE.MeshStandardMaterial({
-      name: 'black',
-      color: 0x222222,
-      roughness: 0.05,
-      metalness: 0.05,
-      envMapIntensity: ENV_MAP_INTENSITY,
-      side: THREE.FrontSide
-    });
-    return material;
-  }
-
-  getDocciaSchiuma() {
-    let material;
-    material = new THREE.MeshStandardMaterial({
-      name: 'docciaSchiuma',
-      color: 0xf4f4f6,
-      // 0xefeff8,
-      roughness: 0.45,
-      metalness: 0.01,
-      map: this.textures.docciaSchiuma,
-      envMapIntensity: ENV_MAP_INTENSITY,
-      side: THREE.FrontSide
-    });
-    return material;
-  }
-
-  getGelMousseDoccia() {
-    let material;
-    material = new THREE.MeshStandardMaterial({
-      name: 'gelMousseDoccia',
-      color: 0xf4f4f6,
-      // 0xefeff8,
-      roughness: 0.45,
-      metalness: 0.01,
-      map: this.textures.gelMousseDoccia,
-      envMapIntensity: ENV_MAP_INTENSITY,
-      side: THREE.FrontSide
-    });
-    return material;
-  }
-
-  getIntimoAttivo() {
-    let material;
-    material = new THREE.MeshStandardMaterial({
-      name: 'intimoAttivo',
-      color: 0xf4f4f6,
-      // 0xefeff8,
-      roughness: 0.45,
-      metalness: 0.01,
-      map: this.textures.intimoAttivo,
-      envMapIntensity: ENV_MAP_INTENSITY,
-      side: THREE.FrontSide
-    });
-    return material;
-  }
-
-  getLatteCorpo() {
-    let material;
-    material = new THREE.MeshStandardMaterial({
-      name: 'latteCorpo',
-      color: 0xf4f4f6,
-      // 0xefeff8,
-      roughness: 0.45,
-      metalness: 0.01,
-      map: this.textures.latteCorpo,
-      envMapIntensity: ENV_MAP_INTENSITY,
-      side: THREE.FrontSide
-    });
-    return material;
-  }
-
-  getEquirectangular(path, callback) {
-    const loader = this.loader;
-    const renderer = this.renderer;
-    loader.load(path, texture => {
-      texture.encoding = THREE.sRGBEncoding;
-      const generator = new THREE.EquirectangularToCubeGenerator(texture, {
-        resolution: 512
-      });
-      const background = generator.renderTarget;
-      const cubeMapTexture = generator.update(renderer);
-      const pmremGenerator = new THREE.PMREMGenerator(cubeMapTexture);
-      pmremGenerator.update(renderer);
-      const pmremCubeUVPacker = new THREE.PMREMCubeUVPacker(pmremGenerator.cubeLods);
-      pmremCubeUVPacker.update(renderer);
-      const cubeRenderTarget = pmremCubeUVPacker.CubeUVRenderTarget;
-      texture.dispose();
-      pmremGenerator.dispose();
-      pmremCubeUVPacker.dispose();
-
-      if (typeof callback === 'function') {
-        callback(cubeRenderTarget.texture, background.texture);
-      }
-    });
-  }
-
-}
-
-exports.default = Materials;
-
-},{}],216:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
+var _colors = require("../colors/colors");
 
 var _dom = _interopRequireDefault(require("../dom/dom.service"));
 
@@ -19139,179 +18453,31 @@ const deg = THREE.Math.degToRad;
 const domService = _dom.default.singleton();
 
 class Model {
-  constructor(node, world) {
+  constructor(node, options) {
+    if (!options) {
+      return console.error('Model options undefiend!');
+    }
+
+    if (!options.world) {
+      return console.error('Model options.world undefiend!');
+    }
+
     this.node = node;
-    this.world = world;
-    this.key = node.getAttribute('model');
-    this.load(model => {
-      this.set(model);
-    });
+    Object.assign(this, options);
+    this.scale = new THREE.Vector3();
+    this.position = new THREE.Vector3();
+    this.create(mesh => this.loaded(mesh));
   }
 
-  load(callback) {
-    const loader = new THREE.FBXLoader();
-    loader.load('./three/models/' + this.key + '/' + this.key + '.fbx', object => {
-      object.traverse(child => {
-        if (child instanceof THREE.Mesh) {
-          switch (this.key) {
-            case 'doccia-schiuma':
-              if (child.name === 'corpo') {
-                child.material = this.world.materials.docciaSchiuma.clone();
-              } else {
-                child.material = this.world.materials.white.clone();
-              }
-
-              break;
-
-            case 'gel-mousse-doccia':
-              switch (child.name) {
-                case 'spray_bottle':
-                  child.renderOrder = 1;
-                  child.material = this.world.materials.gelMousseDoccia.clone();
-                  break;
-
-                case 'tappo':
-                  child.renderOrder = 3;
-                  child.material = this.world.materials.transparent.clone();
-                  break;
-
-                case 'spray':
-                case 'cilindro1':
-                case 'cilindro2':
-                  child.renderOrder = 2;
-                  child.material = this.world.materials.black.clone();
-                  break;
-
-                default:
-                  child.renderOrder = 1;
-                  child.material = this.world.materials.white.clone();
-              }
-
-              break;
-
-            case 'intimo-attivo':
-              if (child.name === 'corpo') {
-                child.material = this.world.materials.intimoAttivo.clone();
-              } else {
-                child.material = this.world.materials.white.clone();
-              }
-
-              break;
-
-            case 'latte-corpo':
-              if (child.name === 'corpo') {
-                child.material = this.world.materials.latteCorpo.clone();
-              } else {
-                child.material = this.world.materials.white.clone();
-              }
-
-              break;
-          }
-
-          console.log(this.key, '>', child.name, child.material);
-        }
-      });
-
-      if (typeof callback === 'function') {
-        console.log(this.key, '>', object);
-        callback(object);
-      }
-    }, xhr => {// console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
-    }, error => {
-      console.log('An error happened', error);
-    });
-  }
-
-  set(model) {
-    const node = this.node;
-    const world = this.world;
-    this.model = model;
-    world.scene.add(model);
-    domService.scrollIntersection$(node).subscribe(event => {
-      this.update(event.intersection, event.windowRect, world.camera.cameraRect);
-    });
-  }
-
-  opacity(opacity) {
-    this.model.traverse(child => {
-      if (child instanceof THREE.Mesh) {
-        child.material.opacity = child.material.name === 'transparent' ? opacity * 0.4 : opacity;
-        child.material.transparent = true;
-        child.material.alphaTest = 0.02;
-      }
-    });
-  }
-
-  pow(intersection, offset) {
-    let pow = Math.min(0.0, intersection.offset(offset)) + 1;
-    pow = Math.max(0.0, pow);
-    pow = _ease.default.Sine.InOut(pow);
-    pow -= 1;
-    return pow;
-  }
-
-  update(intersection, windowRect, cameraRect) {
-    const sx = intersection.width / windowRect.width * cameraRect.width;
-    const sy = intersection.height / windowRect.height * cameraRect.height;
-    const tx = intersection.x * cameraRect.width / windowRect.width - cameraRect.width / 2;
-    const ty = intersection.y * cameraRect.height / windowRect.height - cameraRect.height / 2;
-    const model = this.model;
-    let pow, scale;
-
-    switch (this.key) {
-      case 'doccia-schiuma':
-        scale = sx / 40;
-        model.scale.x = model.scale.y = model.scale.z = scale;
-        pow = this.pow(intersection, window.innerHeight * 0.5);
-        model.rotation.x = deg(16) * pow;
-        model.rotation.y = deg(16) * pow;
-        model.rotation.z = deg(25) + deg(10) * pow;
-        model.position.x = tx + 2;
-        model.position.y = -ty;
-        break;
-
-      case 'gel-mousse-doccia':
-        scale = sx / 8;
-        model.scale.x = model.scale.y = model.scale.z = scale;
-        pow = this.pow(intersection, 100);
-        model.rotation.y = deg(180) * pow;
-        model.rotation.z = deg(5) * pow;
-        model.position.x = tx - 5 * -pow;
-        model.position.y = -ty - 2;
-        this.opacity(Math.max(0, Math.min(1, pow + 1)));
-        break;
-
-      case 'intimo-attivo':
-        scale = sx / 8;
-        model.scale.x = model.scale.y = model.scale.z = scale;
-        pow = Math.min(0.0, intersection.offset(100));
-        model.children[1].rotation.z = -deg(15) - deg(180) * pow;
-        model.rotation.z = deg(35);
-        model.position.x = tx + 5 * -pow;
-        model.position.y = -ty + 2;
-        this.opacity(Math.max(0, Math.min(1, pow + 1)));
-        break;
-
-      case 'latte-corpo':
-        scale = sx / 5.1;
-        model.scale.x = model.scale.y = model.scale.z = scale;
-        pow = Math.min(0.0, intersection.offset(100));
-        model.rotation.y = deg(20) * pow;
-        model.rotation.z = deg(10) * pow;
-        model.position.x = tx - 3 * -pow;
-        model.position.y = -ty;
-        this.opacity(Math.max(0, Math.min(1, pow + 1)));
-        break;
-    } // console.log('model', ty, scale);
-
-  }
-
-  cube(callback) {
+  create(callback) {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({
-      color: 0xff0000
+    const material = new THREE.MeshStandardMaterial({
+      color: (0, _colors.nextColor)(),
+      roughness: 0.4,
+      metalness: 0.01
     });
     const mesh = new THREE.Mesh(geometry, material);
+    mesh.renderOrder = 3;
 
     if (typeof callback === 'function') {
       callback(mesh);
@@ -19320,11 +18486,564 @@ class Model {
     return mesh;
   }
 
+  loaded(mesh) {
+    this.mesh = mesh;
+
+    mesh.userData.render = (time, tick) => {
+      if (this.intersection) {
+        this.render(this, time, tick);
+      }
+    };
+
+    const world = this.world;
+    world.scene.add(mesh);
+    const node = this.node;
+    domService.scrollIntersection$(node).subscribe(event => {
+      this.scroll = event.scroll;
+      this.intersection = event.intersection;
+      this.calculateScaleAndPosition();
+    });
+    console.log('Model.loaded', mesh);
+  }
+
+  calculateScaleAndPosition() {
+    this.world.repos(this, this.intersection);
+  }
+
+  render(time, tick) {
+    const mesh = this.mesh;
+    const scale = this.scale;
+    mesh.scale.set(scale.x, scale.y, scale.z);
+    const position = this.position;
+    mesh.position.set(position.x, position.y, position.z);
+    const pow = this.pow();
+    mesh.rotation.x = deg(180) * pow;
+    mesh.rotation.y = deg(360) * pow;
+  }
+
+  getScroll(offset) {
+    const scroll = this.intersection.scroll(offset); // console.log(scroll);
+
+    return scroll;
+  }
+
+  getPow(offset) {
+    let pow = Math.min(0.0, this.intersection.offset(offset)) + 1;
+    pow = Math.max(0.0, pow);
+    pow = _ease.default.Sine.InOut(pow);
+    pow -= 1;
+    return pow;
+  }
+
 }
 
 exports.default = Model;
 
-},{"../dom/dom.service":205,"../ease/ease":207}],217:[function(require,module,exports){
+},{"../colors/colors":202,"../dom/dom.service":203,"../ease/ease":204}],212:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _dom = _interopRequireDefault(require("../dom/dom.service"));
+
+var _texture = _interopRequireDefault(require("../texture/texture"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/* jshint esversion: 6 */
+const deg = THREE.Math.degToRad;
+
+const domService = _dom.default.singleton();
+
+const geometry = new THREE.PlaneBufferGeometry(1, 1, 20, 20);
+
+class Picture {
+  constructor(node, options) {
+    if (!options) {
+      return console.error('Picture options undefiend!');
+    }
+
+    if (!options.world) {
+      return console.error('Picture options.world undefiend!');
+    }
+
+    this.node = node;
+    this.world = options.world;
+    Object.assign(this, options);
+    this.speed = 0;
+    this.scale = new THREE.Vector3();
+    this.position = new THREE.Vector3();
+    this.create(mesh => this.loaded(mesh));
+  }
+
+  create(callback) {
+    const texture = _texture.default.load(this.node.getAttribute('picture'), this.world.renderer, texture => {
+      this.node.style.paddingBottom = `${texture.image.naturalHeight / texture.image.naturalWidth * 100}%`;
+      const material = this.getMaterial(texture);
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.renderOrder = 2;
+
+      if (typeof callback === 'function') {
+        callback(mesh);
+      }
+    });
+  }
+
+  getMaterial(texture) {
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 1.0,
+      alphaTest: 0.01,
+      side: THREE.DoubleSide
+    });
+    return material;
+  }
+
+  loaded(mesh) {
+    this.mesh = mesh;
+
+    mesh.userData.render = (time, tick) => {
+      if (this.intersection) {
+        this.update(this, time, tick);
+        this.render(this, time, tick);
+      }
+    };
+
+    const world = this.world;
+    world.scene.add(mesh);
+    const node = this.node;
+    domService.scrollIntersection$(node).subscribe(event => {
+      this.scroll = event.scroll;
+      this.intersection = event.intersection;
+      this.calculateScaleAndPosition();
+    });
+    console.log('Picture.loaded', mesh);
+  }
+
+  calculateScaleAndPosition() {
+    this.world.reposPlane(this, this.intersection);
+    this.position.z += 1;
+    this.speed += (this.scroll.speed - this.speed) / 8;
+  }
+
+  update(domPicture, time, tick) {
+    const mesh = domPicture.mesh;
+    mesh.material.opacity = 1;
+  }
+
+  render(domPicture, time, tick) {
+    const mesh = domPicture.mesh;
+    const scale = domPicture.scale;
+    mesh.scale.set(scale.x, scale.y, scale.z);
+    const position = domPicture.position;
+    mesh.position.set(position.x, position.y, position.z);
+  }
+
+}
+
+exports.default = Picture;
+
+},{"../dom/dom.service":203,"../texture/texture":218}],213:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = exports.DEFAULT_FRAGMENT_SHADER = exports.DEFAULT_VERTEX_SHADER = void 0;
+
+var _picture = _interopRequireDefault(require("./picture"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/* jshint esversion: 6 */
+const DEFAULT_VERTEX_SHADER =
+/* glsl */
+`
+varying vec2 vUv;
+uniform float uOpacity;
+uniform float uTime;
+uniform float uPow;
+uniform float uSpeed;
+uniform sampler2D uImage;
+void main() {
+	vUv = uv;
+	vec3 vPosition = position;
+	float s = uSpeed * -0.05;
+	/*
+	float pow = clamp(uPow + 0.5, 0.0, 1.0);
+	vec4 color = texture2D(uImage, vUv);
+	vPosition.y += cos(uv.x + color.r * pow - 0.5) * s - s;
+	*/
+	vPosition.y += cos(uv.x - 0.5) * s - s;
+	gl_Position = projectionMatrix * modelViewMatrix * vec4(vPosition, 1.0);
+}
+`;
+exports.DEFAULT_VERTEX_SHADER = DEFAULT_VERTEX_SHADER;
+const DEFAULT_FRAGMENT_SHADER =
+/* glsl */
+`
+varying vec2 vUv;
+uniform float uOpacity;
+uniform float uTime;
+uniform float uPow;
+uniform float uSpeed;
+uniform sampler2D uImage;
+void main() {
+	float pow = clamp(uPow + 0.5, 0.0, 1.0);
+	float s = uSpeed * -0.05;
+	vec2 p = vec2(vUv.x + cos(vUv.x - 0.5 + s) * s * (1.0 - pow), vUv.y + sin(vUv.y * 0.1 - 0.5 + s) * s * (1.0 - pow));
+	vec4 color = texture2D(uImage, p);
+	// vec4 color = texture2D(uImage, vUv);
+	color.a *= uOpacity;
+	if (color.a < 0.01) discard;
+	gl_FragColor = mix(vec4(1.0, 1.0, 1.0, color.a), color, pow);
+	gl_FragColor.rgb *= gl_FragColor.a;
+}
+`;
+exports.DEFAULT_FRAGMENT_SHADER = DEFAULT_FRAGMENT_SHADER;
+
+class PictureShader extends _picture.default {
+  constructor(node, options) {
+    options.vertexShader = options.vertexShader || DEFAULT_VERTEX_SHADER;
+    options.fragmentShader = options.fragmentShader || DEFAULT_FRAGMENT_SHADER;
+    super(node, options);
+  }
+
+  getMaterial(texture) {
+    const vertexShader = this.vertexShader;
+    const fragmentShader = this.fragmentShader;
+    const material = new THREE.ShaderMaterial({
+      vertexShader: vertexShader,
+      fragmentShader: fragmentShader,
+      uniforms: {
+        uImage: {
+          type: 't',
+          value: texture
+        },
+        uOpacity: {
+          type: 'f',
+          value: 1
+        },
+        uTime: {
+          type: 'f',
+          value: performance.now()
+        },
+        uSpeed: {
+          type: 'f',
+          value: 0
+        },
+        uPow: {
+          type: 'f',
+          value: 0
+        },
+        uResolution: {
+          type: 'v2',
+          value: new THREE.Vector2(window.innerWidth, window.innerHeight).multiplyScalar(window.devicePixelRatio)
+        }
+      },
+      side: THREE.DoubleSide
+    });
+    return material;
+  }
+
+  update(instance, time, tick) {
+    const mesh = instance.mesh;
+    const pow = instance.intersection.offset();
+    mesh.material.uniforms.uTime.value = time;
+    mesh.material.uniforms.uOpacity.value = 1;
+    mesh.material.uniforms.uSpeed.value = instance.speed;
+    mesh.material.uniforms.uPow.value = pow;
+  }
+
+}
+
+exports.default = PictureShader;
+
+},{"./picture":212}],214:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _colors = require("../colors/colors");
+
+var _dom = _interopRequireDefault(require("../dom/dom.service"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/* jshint esversion: 6 */
+const deg = THREE.Math.degToRad;
+
+const domService = _dom.default.singleton();
+
+const geometry = new THREE.PlaneBufferGeometry(1, 1, 20, 20);
+
+class Plane {
+  constructor(node, options) {
+    if (!options) {
+      return console.error('Plane options undefiend!');
+    }
+
+    if (!options.world) {
+      return console.error('Plane options.world undefiend!');
+    }
+
+    this.node = node;
+    this.world = options.world;
+    this.speed = 0;
+    this.scale = new THREE.Vector3();
+    this.position = new THREE.Vector3();
+    Object.assign(this, options);
+    this.create(mesh => this.loaded(mesh));
+  }
+
+  create(callback) {
+    const hex = this.node.getAttribute('plane') || (0, _colors.nextHex)();
+    const material = this.getMaterial((0, _colors.hexToInt)(hex));
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.renderOrder = 1;
+
+    if (typeof callback === 'function') {
+      callback(mesh);
+    }
+  }
+
+  getMaterial(color) {
+    const material = new THREE.MeshBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: 1.0,
+      alphaTest: 0.01,
+      side: THREE.DoubleSide
+    });
+    return material;
+  }
+
+  loaded(mesh) {
+    this.mesh = mesh;
+
+    mesh.userData.render = (time, tick) => {
+      if (this.intersection) {
+        this.update(this, time, tick);
+        this.render(this, time, tick);
+      }
+    };
+
+    const world = this.world;
+    world.scene.add(mesh);
+    const node = this.node;
+    domService.scrollIntersection$(node).subscribe(event => {
+      this.scroll = event.scroll;
+      this.intersection = event.intersection;
+      this.calculateScaleAndPosition();
+    });
+    console.log('Plane.loaded', mesh);
+  }
+
+  calculateScaleAndPosition() {
+    this.world.reposPlane(this, this.intersection);
+    this.speed += (this.scroll.speed - this.speed) / 8;
+  }
+
+  update(domPlane, time, tick) {
+    const mesh = domPlane.mesh;
+    mesh.material.opacity = 1;
+  }
+
+  render(domPlane, time, tick) {
+    const mesh = domPlane.mesh;
+    const scale = domPlane.scale;
+    mesh.scale.set(scale.x, scale.y, scale.z);
+    const position = domPlane.position;
+    mesh.position.set(position.x, position.y, position.z);
+  }
+
+}
+
+exports.default = Plane;
+
+},{"../colors/colors":202,"../dom/dom.service":203}],215:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+/* jshint esversion: 6 */
+class Rect {
+  constructor(rect) {
+    this.x = 0;
+    this.y = 0;
+    this.top = 0;
+    this.right = 0;
+    this.bottom = 0;
+    this.left = 0;
+    this.width = 0;
+    this.height = 0;
+    this.set(rect);
+  }
+
+  static contains(rect, left, top) {
+    return rect.top <= top && top <= rect.bottom && rect.left <= left && left <= rect.right;
+  }
+
+  static intersectRect(r1, r2) {
+    return !(r2.left > r1.right || r2.right < r1.left || r2.top > r1.bottom || r2.bottom < r1.top);
+  }
+
+  static fromNode(node) {
+    if (!node) {
+      return;
+    }
+
+    const rect = node.rect_ || (node.rect_ = new Rect());
+    const rects = node.getClientRects();
+
+    if (!rects.length) {
+      // console.log(rects, node);
+      return rect;
+    }
+
+    const boundingRect = node.getBoundingClientRect(); // rect.top: boundingRect.top + defaultView.pageYOffset,
+    // rect.left: boundingRect.left + defaultView.pageXOffset,
+
+    rect.x = boundingRect.left;
+    rect.y = boundingRect.top;
+    rect.top = boundingRect.top;
+    rect.left = boundingRect.left;
+    rect.width = boundingRect.width;
+    rect.height = boundingRect.height;
+    rect.right = rect.left + rect.width;
+    rect.bottom = rect.top + rect.height;
+    rect.setCenter();
+    return rect;
+  }
+
+  set(rect) {
+    if (rect) {
+      Object.assign(this, rect);
+      this.right = this.left + this.width;
+      this.bottom = this.top + this.height;
+    }
+
+    this.setCenter();
+  }
+
+  setSize(w, h) {
+    this.width = w;
+    this.height = h;
+    this.right = this.left + this.width;
+    this.bottom = this.top + this.height;
+    this.setCenter();
+    console.log(w, h);
+  }
+
+  setCenter() {
+    const center = this.center || (this.center = {});
+    center.top = this.top + this.height / 2;
+    center.left = this.left + this.width / 2;
+    center.x = center.left;
+    center.y = center.top;
+  }
+
+  contains(left, top) {
+    return Rect.contains(this, left, top);
+  }
+
+  intersect(rect) {
+    return Rect.intersectRect(this, rect);
+  }
+
+  intersection(rect, mode = 1) {
+    const intersection = this.intersection_ || (this.intersection_ = {
+      left: 0,
+      top: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      pow: {
+        x: -1,
+        y: -1
+      },
+      offset: function (offset, mode) {
+        offset = offset || 0;
+        let min, max;
+
+        if (mode === 1) {
+          min = -this.height;
+          max = this.rect.height + this.height;
+        } else {
+          min = this.rect.height * 0.1;
+          max = this.rect.height - this.height;
+        }
+
+        let pow = 0.5 - (this.top + offset - min) / max; // pow = Math.max(0, Math.min(1, pow));
+
+        return pow;
+      },
+      scroll: function (offset) {
+        offset = offset || 0;
+        let min, max;
+        min = -this.height;
+        max = this.rect.height + this.height;
+        let scroll = 0.5 - (this.top + offset - min) / max; // scroll = Math.max(0, Math.min(1, scroll));
+
+        return scroll + 0.5;
+      }
+    });
+    intersection.left = this.left;
+    intersection.top = this.top;
+    intersection.width = this.width;
+    intersection.height = this.height;
+    intersection.x = this.left + this.width / 2;
+    intersection.y = this.top + this.height / 2;
+    intersection.rect = rect;
+    const pow = intersection.offset(0, mode);
+    intersection.pow.y = pow;
+    return intersection;
+  }
+
+  intersection___(rect) {
+    const center = {
+      x: (this.center.x - rect.center.x) / (rect.width / 2),
+      y: (this.center.y - rect.center.y) / (rect.height / 2)
+    };
+
+    if (this.intersect(rect)) {
+      const dx = this.left > rect.left ? 0 : Math.abs(rect.left - this.left);
+      const dy = this.top > rect.top ? 0 : Math.abs(rect.top - this.top);
+      let x = dx ? 1 - dx / this.width : (rect.left + rect.width - this.left) / this.width;
+      let y = dy ? 1 - dy / this.height : (rect.top + rect.height - this.top) / this.height;
+      x = Math.min(1, x);
+      y = Math.min(1, y);
+      return {
+        x: x,
+        y: y,
+        center: center
+      };
+    } else {
+      return {
+        x: 0,
+        y: 0,
+        center: center
+      };
+    }
+  }
+
+}
+
+exports.default = Rect;
+
+},{}],216:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19357,7 +19076,7 @@ class Renderer extends THREE.WebGLRenderer {
 
 exports.default = Renderer;
 
-},{}],218:[function(require,module,exports){
+},{}],217:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19376,6 +19095,66 @@ class Scene extends THREE.Scene {
 }
 
 exports.default = Scene;
+
+},{}],218:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+/* jshint esversion: 6 */
+const loader = new THREE.TextureLoader();
+
+class Texture {
+  static load(path, renderer, callback) {
+    const texture = loader.load(path, texture => {
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+
+      if (typeof callback === 'function') {
+        callback(texture);
+      }
+    });
+    return texture;
+  }
+
+  static loadEquirectangularToCube(path, renderer, callback) {
+    loader.load(path, texture => {
+      texture.encoding = THREE.sRGBEncoding;
+      const generator = new THREE.EquirectangularToCubeGenerator(texture, {
+        resolution: 512
+      });
+      const background = generator.renderTarget;
+      const cubeMapTexture = generator.update(renderer);
+      const pmremGenerator = new THREE.PMREMGenerator(cubeMapTexture);
+      pmremGenerator.update(renderer);
+      const pmremCubeUVPacker = new THREE.PMREMCubeUVPacker(pmremGenerator.cubeLods);
+      pmremCubeUVPacker.update(renderer);
+      const cubeRenderTarget = pmremCubeUVPacker.CubeUVRenderTarget;
+      texture.dispose();
+      pmremGenerator.dispose();
+      pmremCubeUVPacker.dispose();
+
+      if (typeof callback === 'function') {
+        callback(cubeRenderTarget.texture, background.texture);
+      }
+    });
+  }
+
+  static setEnvMap(texture, ...materials) {
+    materials.forEach(x => {
+      x.envMap = texture;
+      x.envMapIntensity = 1.0;
+      x.needsUpdate = true;
+    });
+  }
+
+}
+
+exports.default = Texture;
 
 },{}],219:[function(require,module,exports){
 "use strict";
@@ -19497,7 +19276,7 @@ class Title {
 
 exports.default = Title;
 
-},{"../dom/dom.service":205,"../ease/ease":207}],221:[function(require,module,exports){
+},{"../dom/dom.service":203,"../ease/ease":204}],221:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19509,7 +19288,7 @@ var _camera = _interopRequireDefault(require("../camera/camera"));
 
 var _lights = _interopRequireDefault(require("../lights/lights"));
 
-var _materials = _interopRequireDefault(require("../materials/materials"));
+var _rect = _interopRequireDefault(require("../rect/rect"));
 
 var _renderer = _interopRequireDefault(require("../renderer/renderer"));
 
@@ -19525,22 +19304,18 @@ class World extends _emittable.default {
     super();
     this.clock = new THREE.Clock();
     this.container = container;
-    this.size = {
-      width: 0,
-      height: 0,
-      aspect: 0
-    };
+    this.worldRect = _rect.default.fromNode(container);
     const scene = this.scene = new _scene.default();
     const camera = this.camera = new _camera.default(container, scene);
     const renderer = this.renderer = new _renderer.default(container);
     const lights = this.lights = new _lights.default(scene);
-    const materials = this.materials = new _materials.default(renderer, materials => {
-      if (typeof callback === 'function') {
-        callback(this);
-      }
-    });
     this.resize = this.resize.bind(this);
     this.resize();
+
+    if (typeof callback === 'function') {
+      callback(this);
+    }
+
     window.addEventListener('resize', this.resize, false);
     this.animate();
   }
@@ -19550,10 +19325,7 @@ class World extends _emittable.default {
       const container = this.container;
       const w = container.offsetWidth;
       const h = container.offsetHeight;
-      const size = this.size;
-      size.width = w;
-      size.height = h;
-      size.aspect = w / h;
+      this.worldRect.setSize(w, h);
       this.renderer.setSize(w, h);
       this.camera.setSize(w, h);
     } catch (error) {
@@ -19591,13 +19363,35 @@ class World extends _emittable.default {
     });
   }
 
+  reposPlane(object, rect) {
+    const worldRect = this.worldRect;
+    const cameraRect = this.camera.cameraRect;
+    const sx = rect.width / worldRect.width * cameraRect.width;
+    const sy = rect.height / worldRect.height * cameraRect.height;
+    object.scale.set(sx, sy, 1);
+    const tx = rect.x * cameraRect.width / worldRect.width - cameraRect.width / 2;
+    const ty = rect.y * cameraRect.height / worldRect.height - cameraRect.height / 2;
+    object.position.set(tx, -ty, 0);
+  }
+
+  repos(object, rect) {
+    const worldRect = this.worldRect;
+    const cameraRect = this.camera.cameraRect;
+    const sx = rect.width / worldRect.width * cameraRect.width;
+    const sy = rect.height / worldRect.height * cameraRect.height;
+    object.scale.set(sx, sx, sx);
+    const tx = rect.x * cameraRect.width / worldRect.width - cameraRect.width / 2;
+    const ty = rect.y * cameraRect.height / worldRect.height - cameraRect.height / 2;
+    object.position.set(tx, -ty, 0);
+  }
+
   static init() {
-    [...document.querySelectorAll('[example-01]')].map(x => new World(x));
+    return [...document.querySelectorAll('[world]')].map(x => new World(x));
   }
 
 }
 
 exports.default = World;
 
-},{"../camera/camera":201,"../lights/lights":213,"../materials/materials":215,"../renderer/renderer":217,"../scene/scene":218,"../threejs/interactive/emittable":219}]},{},[214]);
+},{"../camera/camera":201,"../lights/lights":209,"../rect/rect":215,"../renderer/renderer":216,"../scene/scene":217,"../threejs/interactive/emittable":219}]},{},[210]);
 //# sourceMappingURL=main.js.map

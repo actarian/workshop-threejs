@@ -1,7 +1,9 @@
 /* jshint esversion: 6 */
 
-import { nextHex } from '../colors/colors';
-import DomPicture from '../dom/dom.picture';
+// import { nextHex } from '../colors/colors';
+import PictureShader from '../picture/picture.shader';
+import Plane from '../plane/plane';
+import Title from '../title/title';
 import World from '../world/world';
 
 const deg = THREE.Math.degToRad;
@@ -11,35 +13,43 @@ export default class Example04 {
 	constructor(container) {
 		this.container = container;
 
+		// RANDOM COLOR TO SECTIONS
+		/*
 		const sections = [...document.querySelectorAll('.section')].forEach(node => {
 			node.style.backgroundColor = nextHex();
 		});
+		*/
 
+		// WORLD
 		const world = new World(container, (world) => {
-			const pictures = [...document.querySelectorAll('[picture]')].map((node, index) => {
-				const picture = new DomPicture(node, {
+			console.log(world);
+
+			// PLANES
+			const planes = [...document.querySelectorAll('[plane]')].map((node, index) => {
+				const plane = new Plane(node, {
 					world: world,
-					render: (domPicture, time, tick) => {
-						const picture = domPicture.picture;
-						const scroll = domPicture.getScroll();
-						// picture.rotation.x = deg(90) + deg(180) * scroll;
-						// picture.rotation.y = deg(180) * scroll;
-						const scale = domPicture.scale;
-						picture.scale.set(scale.x, scale.y, scale.z);
-						const position = domPicture.position;
-						picture.position.set(position.x, position.y, position.z);
-						/*
-						if (index % 2 === 0) {
-							picture.position.set(position.x + 2.5 - scroll * 5, position.y, position.z);
-						} else {
-							picture.position.set(position.x - 2.5 + scroll * 5, position.y, position.z);
-						}
-						*/
+				});
+				return plane;
+			});
+
+			// PICTURES
+			const pictures = [...document.querySelectorAll('[picture]')].map((node, index) => {
+				const picture = new PictureShader(node, {
+					world: world,
+					render: (instance, time, tick) => {
+						const mesh = instance.mesh;
+						const scale = instance.scale;
+						mesh.scale.set(scale.x, scale.y, scale.z);
+						const position = instance.position;
+						mesh.position.set(position.x, position.y, position.z);
 					}
 				});
 				return picture;
 			});
 		});
+
+		// TITLES
+		const titles = [...document.querySelectorAll('[title]')].map(node => new Title(node));
 	}
 
 }

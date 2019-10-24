@@ -63,13 +63,17 @@ export const colors = [
 	}
   ];
 
+export function hexToInt(hex) {
+	return parseInt(hex.replace(/^#/, ''), 16);
+}
+
 export function randomHex() {
 	return colors[Math.floor(Math.random() * colors.length)].hex;
 }
 
 export function randomColor() {
 	const hex = randomHex();
-	return parseInt(hex.replace(/^#/, ''), 16);
+	return hexToInt(hex);
 }
 
 let index = -1;
@@ -81,5 +85,5 @@ export function nextHex() {
 
 export function nextColor() {
 	const hex = nextHex();
-	return parseInt(hex.replace(/^#/, ''), 16);
+	return hexToInt(hex);
 }

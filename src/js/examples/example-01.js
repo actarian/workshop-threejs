@@ -8,10 +8,12 @@ export default class Example01 {
 
 		this.container = container;
 
+		// SCENE
 		const scene = this.scene = new THREE.Scene();
 		scene.background = new THREE.Color(randomColor());
 		// scene.fog = new THREE.Fog(scene.background, 0, 50);
 
+		// CAMERA
 		const camera = this.camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.01, 2000);
 		camera.position.set(0, 0, 5);
 		camera.target = new THREE.Vector3();
@@ -19,6 +21,28 @@ export default class Example01 {
 		camera.updateProjectionMatrix();
 		scene.add(camera);
 
+		// LIGHT
+		const light = new THREE.PointLight(randomColor(), 1.0);
+		light.position.set(0, 10, 5);
+		/*
+		light.userData.render = (time, tick) => {
+			light.position.y = Math.cos(tick * Math.PI / 180) * 10;
+		};
+		*/
+		scene.add(light);
+
+		// RENDERER
+		const renderer = this.renderer = new THREE.WebGLRenderer({
+			antialias: true,
+			// alpha: true,
+			// premultipliedAlpha: true,
+			// preserveDrawingBuffer: false,
+		});
+		renderer.setClearColor(randomColor(), 1);
+		renderer.setPixelRatio(window.devicePixelRatio);
+		container.appendChild(renderer.domElement);
+
+		// MODEL
 		const geometry = new THREE.BoxGeometry(1, 1, 1);
 		const material = new THREE.MeshStandardMaterial({
 			color: randomColor(),
@@ -34,26 +58,10 @@ export default class Example01 {
 		*/
 		scene.add(cube);
 
-		const light = new THREE.PointLight(randomColor(), 1.0);
-		light.position.set(0, 10, 5);
-		/*
-		light.userData.render = (time, tick) => {
-			light.position.y = Math.cos(tick * Math.PI / 180) * 10;
-		};
-		*/
-		scene.add(light);
-
-		const renderer = this.renderer = new THREE.WebGLRenderer({
-			antialias: true,
-			// alpha: true,
-			// premultipliedAlpha: true,
-			// preserveDrawingBuffer: false,
-		});
-		renderer.setClearColor(randomColor(), 1);
-		renderer.setPixelRatio(window.devicePixelRatio);
-		container.appendChild(renderer.domElement);
-
+		// LISTENERS
 		this.addListeners();
+
+		// ANIMATION LOOP
 		this.animate();
 	}
 

@@ -2,7 +2,7 @@
 
 import Camera from '../camera/camera';
 import Lights from '../lights/lights';
-import Materials from '../materials/materials';
+import Rect from '../rect/rect';
 import Renderer from '../renderer/renderer';
 import Scene from '../scene/scene';
 import Emittable from '../threejs/interactive/emittable';
@@ -13,18 +13,16 @@ export default class World extends Emittable {
 		super();
 		this.clock = new THREE.Clock();
 		this.container = container;
-		this.size = { width: 0, height: 0, aspect: 0 };
+		this.worldRect = Rect.fromNode(container);
 		const scene = this.scene = new Scene();
 		const camera = this.camera = new Camera(container, scene);
 		const renderer = this.renderer = new Renderer(container);
 		const lights = this.lights = new Lights(scene);
-		const materials = this.materials = new Materials(renderer, (materials) => {
-			if (typeof callback === 'function') {
-				callback(this);
-			}
-		});
 		this.resize = this.resize.bind(this);
 		this.resize();
+		if (typeof callback === 'function') {
+			callback(this);
+		}
 		window.addEventListener('resize', this.resize, false);
 		this.animate();
 	}
@@ -34,10 +32,7 @@ export default class World extends Emittable {
 			const container = this.container;
 			const w = container.offsetWidth;
 			const h = container.offsetHeight;
-			const size = this.size;
-			size.width = w;
-			size.height = h;
-			size.aspect = w / h;
+			this.worldRect.setSize(w, h);
 			this.renderer.setSize(w, h);
 			this.camera.setSize(w, h);
 		} catch (error) {
@@ -66,7 +61,6 @@ export default class World extends Emittable {
 		} catch (error) {
 			console.log('error', error);
 		}
-
 	}
 
 	animate() {
@@ -76,8 +70,30 @@ export default class World extends Emittable {
 		});
 	}
 
+	reposPlane(object, rect) {
+		const worldRect = this.worldRect;
+		const cameraRect = this.camera.cameraRect;
+		const sx = rect.width / worldRect.width * cameraRect.width;
+		const sy = rect.height / worldRect.height * cameraRect.height;
+		object.scale.set(sx, sy, 1);
+		const tx = rect.x * cameraRect.width / worldRect.width - cameraRect.width / 2;
+		const ty = rect.y * cameraRect.height / worldRect.height - cameraRect.height / 2;
+		object.position.set(tx, -ty, 0);
+	}
+
+	repos(object, rect) {
+		const worldRect = this.worldRect;
+		const cameraRect = this.camera.cameraRect;
+		const sx = rect.width / worldRect.width * cameraRect.width;
+		const sy = rect.height / worldRect.height * cameraRect.height;
+		object.scale.set(sx, sx, sx);
+		const tx = rect.x * cameraRect.width / worldRect.width - cameraRect.width / 2;
+		const ty = rect.y * cameraRect.height / worldRect.height - cameraRect.height / 2;
+		object.position.set(tx, -ty, 0);
+	}
+
 	static init() {
-		[...document.querySelectorAll('[example-01]')].map(x => new World(x));
+		return [...document.querySelectorAll('[world]')].map(x => new World(x));
 	}
 
 }

@@ -4,7 +4,7 @@ import LocomotiveScroll from 'locomotive-scroll';
 import { combineLatest, fromEvent, fromEventPattern, range } from 'rxjs';
 import { animationFrame } from 'rxjs/internal/scheduler/animationFrame';
 import { auditTime, distinctUntilChanged, filter, first, map, shareReplay, startWith } from 'rxjs/operators';
-import Rect from './rect';
+import Rect from '../rect/rect';
 
 let SINGLETON;
 
