@@ -18060,12 +18060,11 @@ class Example01 {
       metalness: 0.01
     });
     const cube = new THREE.Mesh(geometry, material);
-    /*
+
     cube.userData.render = (time, tick) => {
-    	cube.rotation.x += 0.01;
-    	cube.rotation.y += 0.01;
+      cube.rotation.x += 0.01;
+      cube.rotation.y += 0.01;
     };
-    */
 
     scene.add(cube); // LISTENERS
 
