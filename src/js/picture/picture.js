@@ -4,9 +4,6 @@ import DomService from '../dom/dom.service';
 import { PlaneGeometry } from '../plane/plane';
 import Texture from '../texture/texture';
 
-const deg = THREE.Math.degToRad;
-const domService = DomService.singleton();
-
 export default class Picture {
 
 	constructor(node, options) {
@@ -60,7 +57,7 @@ export default class Picture {
 		const world = this.world;
 		world.scene.add(mesh);
 		const node = this.node;
-		domService.scrollIntersection$(node).subscribe(event => {
+		DomService.scrollIntersection$(node).subscribe(event => {
 			this.scroll = event.scroll;
 			this.intersection = event.intersection;
 			this.calculateScaleAndPosition();

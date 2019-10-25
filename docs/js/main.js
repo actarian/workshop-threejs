@@ -17205,7 +17205,6 @@ function nextColor() {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.tween = tween;
 exports.default = void 0;
 
 var _locomotiveScroll = _interopRequireDefault(require("locomotive-scroll"));
@@ -17222,6 +17221,23 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 /* jshint esversion: 6 */
 let SINGLETON;
+const DEFAULT_SCROLL_TARGET = window;
+
+function getScrollTop(node) {
+  if (node === document) {
+    return getScrollTop(document.scrollingElement || document.documentElement || document.body);
+  }
+
+  return node.pageYOffset || node.scrollY || node.scrollTop || 0;
+}
+
+function getScrollLeft(node) {
+  if (node === document) {
+    return getScrollLeft(document.scrollingElement || document.documentElement || document.body);
+  }
+
+  return node.pageXOffset || node.scrollX || node.scrollLeft || 0;
+}
 
 function tween(from, to, friction) {
   if (from === to || Math.abs(to - from) < 0.02) {
@@ -17231,8 +17247,152 @@ function tween(from, to, friction) {
   return from + (to - from) / friction;
 }
 
-class DomService {
+function windowRect$() {
+  const windowRect = new _rect.default({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+  return (0, _rxjs.fromEvent)(window, 'resize').pipe((0, _operators.map)(originalEvent => {
+    windowRect.width = window.innerWidth;
+    windowRect.height = window.innerHeight;
+    return windowRect;
+  }), (0, _operators.startWith)(windowRect));
+}
+
+function locomotiveScrollEvent$() {
+  const event = {
+    speed: 0,
+    scrollTop: 0,
+    scrollLeft: 0,
+    direction: 0,
+    originalEvent: null
+  };
+  const locomotiveScroll = new _locomotiveScroll.default({
+    el: document.querySelector('#js-scroll'),
+    smooth: true,
+    getSpeed: true,
+    getDirection: true
+  });
+  return (0, _rxjs.fromEventPattern)(handler => {
+    locomotiveScroll.on('scroll', handler);
+  }, handler => {// !!! locomotiveScroll.removeListener('scroll', handler);
+  }).pipe((0, _operators.map)(instance => {
+    // instance.direction, instance.speed
+    // const progress = instance.scroll.y / instance.limit;
+    event.speed = instance.speed;
+    event.scrollTop = instance.scroll.y;
+    event.direction = instance.direction;
+    return event;
+  }), (0, _operators.startWith)(event), (0, _operators.shareReplay)());
+}
+
+function scrollEvent$() {
+  const target = DEFAULT_SCROLL_TARGET;
+  let previousTop = getScrollTop(target);
+  const event = {
+    scrollTop: previousTop,
+    scrollLeft: getScrollLeft(target),
+    direction: 0,
+    originalEvent: null
+  };
+  return (0, _rxjs.fromEvent)(target, 'scroll').pipe((0, _operators.auditTime)(16), // 60 fps
+  (0, _operators.map)(originalEvent => {
+    event.scrollTop = getScrollTop(target);
+    event.scrollLeft = getScrollLeft(target);
+    const diff = event.scrollTop - previousTop;
+    event.direction = diff === 0 ? 0 : diff / Math.abs(diff);
+    previousTop = event.scrollTop;
+    event.originalEvent = originalEvent;
+    return event;
+  }), (0, _operators.startWith)(event));
+}
+
+class Dom {
+  static scrollIntersection$(node) {
+    return Dom.scrollAndRect$.pipe((0, _operators.map)(datas => {
+      // const scrollTop = datas[0];
+      const windowRect = datas[1];
+
+      const rect = _rect.default.fromNode(node);
+
+      const intersection = rect.intersection(windowRect);
+      const response = Dom.scrollIntersection_;
+      response.scroll = datas[0];
+      response.windowRect = datas[1];
+      response.rect = rect;
+      response.intersection = intersection;
+      return response;
+    }));
+  }
+
+  static appearOnLoad$(node, value = 0.0) {
+    // -0.5
+    const isCover = node.hasAttribute('cover');
+    return Dom.scrollIntersection$(node).pipe((0, _operators.filter)(x => (Dom.ready || isCover) && x.intersection.y > value && x.intersection.x > 0), (0, _operators.first)());
+  }
+
+  static appear$(node, value = 0.0) {
+    // -0.5
+    return Dom.scrollIntersection$(node).pipe((0, _operators.filter)(x => x.intersection.y > value), (0, _operators.first)());
+  }
+
+  static visibility$(node, value = 0.5) {
+    return Dom.scrollIntersection$(node).pipe((0, _operators.map)(x => x.intersection.y > value), (0, _operators.distinctUntilChanged)());
+  }
+
+  static firstVisibility$(node, value = 0.5) {
+    return Dom.visibility$(node, value).pipe((0, _operators.filter)(visible => visible), (0, _operators.first)());
+  }
+
+  static rafIntersection$(node) {
+    return Dom.rafAndRect$.pipe((0, _operators.map)(datas => {
+      // const scrollTop = datas[0];
+      const windowRect = datas[1];
+
+      const rect = _rect.default.fromNode(node);
+
+      const intersection = rect.intersection(windowRect);
+      const response = Dom.rafIntersection_;
+      response.scroll = datas[0];
+      response.windowRect = datas[1];
+      response.rect = rect;
+      response.intersection = intersection;
+      return response;
+    }));
+  }
+
+}
+
+Dom.windowRect$ = windowRect$();
+Dom.scrollIntersection_ = {};
+Dom.scrollEvent$ = scrollEvent$();
+Dom.locomotiveScrollEvent$ = locomotiveScrollEvent$();
+Dom.scroll$ = Dom.locomotiveScrollEvent$;
+Dom.scrollAndRect$ = (0, _rxjs.combineLatest)(Dom.scroll$, Dom.windowRect$).pipe((0, _operators.shareReplay)());
+Dom.rafIntersection_ = {};
+Dom.raf$ = (0, _rxjs.range)(0, Number.POSITIVE_INFINITY, _animationFrame.animationFrame);
+Dom.rafAndRect$ = (0, _rxjs.combineLatest)(Dom.raf$, Dom.windowRect$).pipe((0, _operators.shareReplay)());
+
+class DomService extends Dom {
+  get ready() {
+    return this.ready_;
+  }
+
+  set ready(ready) {
+    this.ready_ = ready;
+  }
+
+  get scrollTop() {
+    return getScrollTop(DEFAULT_SCROLL_TARGET);
+  }
+
+  get scrollLeft() {
+    return getScrollLeft(DEFAULT_SCROLL_TARGET);
+  }
+
   constructor() {
+    super();
+
     const hasPassiveEvents = () => {
       let has = false;
 
@@ -17253,307 +17413,6 @@ class DomService {
     };
 
     this.hasPassiveEvents = hasPassiveEvents();
-  }
-
-  get ready() {
-    return this.ready_;
-  }
-
-  set ready(ready) {
-    this.ready_ = ready;
-  }
-
-  get scrollTop() {
-    return DomService.singletonScrollTop(DomService.DEFAULT_SCROLL_TARGET);
-  }
-
-  get scrollLeft() {
-    return DomService.singletonScrollLeft(DomService.DEFAULT_SCROLL_TARGET);
-  }
-
-  scrollTo(left, top) {
-    DomService.DEFAULT_SCROLL_TARGET.scrollTo(0, top);
-  }
-
-  scroll(options) {
-    DomService.DEFAULT_SCROLL_TARGET.scroll(options);
-  }
-
-  hasWebglSupport() {
-    if (this.isIE()) {
-      return false;
-    }
-
-    if (!this.hasWebgl()) {
-      return false;
-    }
-
-    return true;
-  }
-
-  isIE() {
-    const ua = window.navigator.userAgent;
-    const msie = ua.indexOf('MSIE ');
-
-    if (msie > 0) {
-      // IE 10 or older => return version number
-      return parseInt(ua.substring(msie + 5, ua.indexOf('.', msie)), 10);
-    }
-
-    const trident = ua.indexOf('Trident/');
-
-    if (trident > 0) {
-      // IE 11 => return version number
-      const rv = ua.indexOf('rv:');
-      return parseInt(ua.substring(rv + 3, ua.indexOf('.', rv)), 10);
-    }
-
-    const edge = ua.indexOf('Edge/');
-
-    if (edge > 0) {
-      // Edge (IE 12+) => return version number
-      return parseInt(ua.substring(edge + 5, ua.indexOf('.', edge)), 10);
-    } // other browser
-
-
-    return false;
-  }
-
-  hasWebgl() {
-    let gl,
-        debugInfo,
-        vendor,
-        renderer,
-        has = false;
-
-    try {
-      const canvas = document.createElement('canvas');
-
-      if (!!window.WebGLRenderingContext) {
-        gl = canvas.getContext('webgl', {
-          failIfMajorPerformanceCaveat: true
-        }) || canvas.getContext('experimental-webgl', {
-          failIfMajorPerformanceCaveat: true
-        });
-      }
-    } catch (e) {
-      console.log('no webgl');
-    }
-
-    if (gl) {
-      debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-      vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-      renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-      has = true;
-    }
-
-    console.log(`WebGLCapabilities debugInfo: ${debugInfo} vendor: ${vendor} renderer: ${renderer} `);
-    return has;
-  }
-
-  getOuterHeight(node) {
-    let height = node.clientHeight;
-    const computedStyle = window.getComputedStyle(node);
-    height += parseInt(computedStyle.marginTop, 10);
-    height += parseInt(computedStyle.marginBottom, 10);
-    height += parseInt(computedStyle.borderTopWidth, 10);
-    height += parseInt(computedStyle.borderBottomWidth, 10);
-    return height;
-  }
-
-  getOuterWidth(node) {
-    let width = node.clientWidth;
-    const computedStyle = window.getComputedStyle(node);
-    width += parseInt(computedStyle.marginLeft, 10);
-    width += parseInt(computedStyle.marginRight, 10);
-    width += parseInt(computedStyle.borderLeftWidth, 10);
-    width += parseInt(computedStyle.borderRightWidth, 10);
-    return width;
-  }
-
-  raf$() {
-    return DomService.raf$;
-  }
-
-  windowRect$() {
-    return DomService.windowRect$;
-  }
-
-  rafAndRect$() {
-    return DomService.rafAndRect$;
-  }
-
-  scroll$() {
-    return DomService.scroll$;
-  }
-
-  scrollAndRect$() {
-    return DomService.scrollAndRect$;
-  }
-
-  smoothScroll$(selector, friction = 6) {
-    const target = document.querySelector('.smooth-scroll');
-    const node = document.querySelector(selector);
-    let down = false;
-    let first = true;
-    return this.raf$().pipe((0, _operators.map)(() => {
-      // const outerHeight = this.getOuterHeight(node);
-      const innerHeight = node.lastElementChild.offsetTop + node.lastElementChild.offsetHeight;
-
-      if (parseInt(target.style.height) !== innerHeight) {
-        target.style = `height: ${innerHeight}px`;
-      }
-
-      const nodeTop = node.top || 0;
-      const top = down ? -this.scrollTop : tween(nodeTop, -this.scrollTop, first ? 1 : friction);
-      const left = (node.parentNode.offsetWidth - node.offsetWidth) / 2;
-
-      if (node.left !== left) {
-        node.left = left;
-        node.style.left = `${left}px`;
-      }
-
-      if (node.top !== top) {
-        node.top = top; // node.style.transform = `translateX(-50%) translateY(${top}px)`;
-        // node.style.top = `${top}px`;
-
-        node.scrollTop = -top;
-        first = false;
-        return top;
-      } else {
-        return null;
-      }
-    }), (0, _operators.filter)(x => x !== null), (0, _operators.shareReplay)());
-  }
-
-  getStyleSheet() {
-    for (let i = 0; i < document.styleSheets.length; i++) {
-      const sheet = document.styleSheets[i];
-      return sheet;
-    }
-  }
-
-  virtualScroll$(selector, friction = 10) {
-    const style = this.getStyleSheet();
-    const ruleIndex = style.insertRule(`.virtual-scroll:after { content: ''; display:block; width: 100%; height: 1px; }`, style.cssRules.length);
-    const rule = style.cssRules[ruleIndex]; // console.log('rule', style.cssRules.length, rule.cssText);
-
-    let outerHeight_ = 0;
-    const node = document.querySelector(selector);
-    node.addEventListener('wheel', event => {
-      // console.log('wheel', event);
-      this.scrollTo(0, this.scrollTop + event.deltaY);
-    });
-    let down = false;
-    let first = true;
-    return this.raf$().pipe((0, _operators.map)(() => {
-      const outerHeight = this.getOuterHeight(node);
-
-      if (outerHeight_ !== outerHeight) {
-        outerHeight_ = outerHeight;
-        rule.style.height = `${outerHeight_}px`; // console.log(rule.style.height);
-      }
-
-      const nodeTop = node.top || 0;
-      const top = down ? -this.scrollTop : tween(nodeTop, -this.scrollTop, first ? 1 : friction);
-
-      if (node.top !== top) {
-        node.top = top;
-        node.style.transform = `translateX(-50%) translateY(${top}px)`; // node.style = `position: fixed; top: 0; transform: translateX(-50%) translateY(${top}px)`;
-
-        first = false;
-        return top;
-      } else {
-        return null;
-      }
-    }), (0, _operators.filter)(x => x !== null), (0, _operators.shareReplay)());
-  }
-
-  rafIntersection$(node) {
-    return this.rafAndRect$().pipe((0, _operators.map)(datas => {
-      // const scrollTop = datas[0];
-      const windowRect = datas[1];
-
-      const rect = _rect.default.fromNode(node);
-
-      const intersection = rect.intersection(windowRect);
-      const response = DomService.rafIntersection_;
-      response.scroll = datas[0];
-      response.windowRect = datas[1];
-      response.rect = rect;
-      response.intersection = intersection;
-      return response;
-    }));
-  }
-
-  scrollIntersection$(node, mode = 1) {
-    return this.scrollAndRect$().pipe((0, _operators.map)(datas => {
-      // const scrollTop = datas[0];
-      const windowRect = datas[1];
-
-      const rect = _rect.default.fromNode(node);
-
-      const intersection = rect.intersection(windowRect, mode);
-      const response = DomService.scrollIntersection_;
-      response.scroll = datas[0];
-      response.windowRect = datas[1];
-      response.rect = rect;
-      response.intersection = intersection;
-      return response;
-    }));
-  }
-
-  appearOnLoad$(node, value = 0.0) {
-    // -0.5
-    const isCover = node.hasAttribute('cover');
-    return this.rafIntersection$(node).pipe((0, _operators.filter)(x => (this.ready || isCover) && x.intersection.y > value && x.intersection.x > 0), (0, _operators.first)());
-  }
-
-  appear$(node, value = 0.0) {
-    // -0.5
-    return this.rafIntersection$(node).pipe((0, _operators.filter)(x => x.intersection.y > value), (0, _operators.first)());
-  }
-
-  visibility$(node, value = 0.5) {
-    return this.rafIntersection$(node).pipe((0, _operators.map)(x => x.intersection.y > value), (0, _operators.distinctUntilChanged)());
-  }
-
-  firstVisibility$(node, value = 0.5) {
-    return this.visibility$(node, value).pipe((0, _operators.filter)(visible => visible), (0, _operators.first)());
-  }
-
-  addCustomRules() {
-    const sheet = this.addCustomSheet();
-    const body = document.querySelector('body');
-    const node = document.createElement('div');
-    node.style.width = '100px';
-    node.style.height = '100px';
-    node.style.overflow = 'auto';
-    node.style.visibility = 'hidden';
-    node.style.msOverflowStyle = 'scrollbar'; // needed for WinJS apps
-
-    const inner = document.createElement('div');
-    inner.style.width = 'auto';
-    inner.style.height = '200px';
-    node.appendChild(inner);
-    body.appendChild(node);
-    const scrollBarWidth = node.offsetWidth - inner.offsetWidth;
-    body.removeChild(node);
-  }
-
-  addCustomSheet() {
-    const style = document.createElement('style');
-    style.appendChild(document.createTextNode(''));
-    document.head.appendChild(style);
-    return style.sheet;
-  }
-
-  isDescendantOf(node, target) {
-    return DomService.isDescendantOf(node, target);
-  }
-
-  get agent() {
-    return DomService.agent || DomService.detect();
   }
 
   static factory() {
@@ -17663,81 +17522,265 @@ class DomService {
     return SINGLETON;
   }
 
+  raf$() {
+    return DomService.raf$;
+  }
+
+  windowRect$() {
+    return DomService.windowRect$;
+  }
+
+  rafAndRect$() {
+    return DomService.rafAndRect$;
+  }
+
+  scroll$() {
+    return DomService.scroll$;
+  }
+
+  scrollAndRect$() {
+    return DomService.scrollAndRect$;
+  }
+
+  rafIntersection$(node) {
+    return DomService.rafIntersection$(node);
+  }
+
+  scrollIntersection$(node) {
+    return DomService.scrollIntersection$(node);
+  }
+
+  appearOnLoad$(node, value = 0.0) {
+    return DomService.appearOnLoad$(node, value);
+  }
+
+  appear$(node, value = 0.0) {
+    return DomService.appear$(node, value);
+  }
+
+  visibility$(node, value = 0.5) {
+    return DomService.visibility$(node, value);
+  }
+
+  firstVisibility$(node, value = 0.5) {
+    return DomService.firstVisibility$(node, value);
+  }
+
+  scrollTo(left, top) {
+    DEFAULT_SCROLL_TARGET.scrollTo(0, top);
+  }
+
+  scroll(options) {
+    DEFAULT_SCROLL_TARGET.scroll(options);
+  }
+
+  hasWebglSupport() {
+    if (this.isIE()) {
+      return false;
+    }
+
+    if (!this.hasWebgl()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  isIE() {
+    const ua = window.navigator.userAgent;
+    const msie = ua.indexOf('MSIE ');
+
+    if (msie > 0) {
+      // IE 10 or older => return version number
+      return parseInt(ua.substring(msie + 5, ua.indexOf('.', msie)), 10);
+    }
+
+    const trident = ua.indexOf('Trident/');
+
+    if (trident > 0) {
+      // IE 11 => return version number
+      const rv = ua.indexOf('rv:');
+      return parseInt(ua.substring(rv + 3, ua.indexOf('.', rv)), 10);
+    }
+
+    const edge = ua.indexOf('Edge/');
+
+    if (edge > 0) {
+      // Edge (IE 12+) => return version number
+      return parseInt(ua.substring(edge + 5, ua.indexOf('.', edge)), 10);
+    } // other browser
+
+
+    return false;
+  }
+
+  hasWebgl() {
+    let gl,
+        debugInfo,
+        vendor,
+        renderer,
+        has = false;
+
+    try {
+      const canvas = document.createElement('canvas');
+
+      if (!!window.WebGLRenderingContext) {
+        gl = canvas.getContext('webgl', {
+          failIfMajorPerformanceCaveat: true
+        }) || canvas.getContext('experimental-webgl', {
+          failIfMajorPerformanceCaveat: true
+        });
+      }
+    } catch (e) {
+      console.log('no webgl');
+    }
+
+    if (gl) {
+      debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+      renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+      has = true;
+    }
+
+    console.log(`WebGLCapabilities debugInfo: ${debugInfo} vendor: ${vendor} renderer: ${renderer} `);
+    return has;
+  }
+
+  getOuterHeight(node) {
+    let height = node.clientHeight;
+    const computedStyle = window.getComputedStyle(node);
+    height += parseInt(computedStyle.marginTop, 10);
+    height += parseInt(computedStyle.marginBottom, 10);
+    height += parseInt(computedStyle.borderTopWidth, 10);
+    height += parseInt(computedStyle.borderBottomWidth, 10);
+    return height;
+  }
+
+  getOuterWidth(node) {
+    let width = node.clientWidth;
+    const computedStyle = window.getComputedStyle(node);
+    width += parseInt(computedStyle.marginLeft, 10);
+    width += parseInt(computedStyle.marginRight, 10);
+    width += parseInt(computedStyle.borderLeftWidth, 10);
+    width += parseInt(computedStyle.borderRightWidth, 10);
+    return width;
+  }
+
+  smoothScroll$(selector, friction = 6) {
+    const target = document.querySelector('.smooth-scroll');
+    const node = document.querySelector(selector);
+    let down = false;
+    let first = true;
+    return this.raf$().pipe((0, _operators.map)(() => {
+      // const outerHeight = this.getOuterHeight(node);
+      const innerHeight = node.lastElementChild.offsetTop + node.lastElementChild.offsetHeight;
+
+      if (parseInt(target.style.height) !== innerHeight) {
+        target.style = `height: ${innerHeight}px`;
+      }
+
+      const nodeTop = node.top || 0;
+      const top = down ? -this.scrollTop : tween(nodeTop, -this.scrollTop, first ? 1 : friction);
+      const left = (node.parentNode.offsetWidth - node.offsetWidth) / 2;
+
+      if (node.left !== left) {
+        node.left = left;
+        node.style.left = `${left}px`;
+      }
+
+      if (node.top !== top) {
+        node.top = top; // node.style.transform = `translateX(-50%) translateY(${top}px)`;
+        // node.style.top = `${top}px`;
+
+        node.scrollTop = -top;
+        first = false;
+        return top;
+      } else {
+        return null;
+      }
+    }), (0, _operators.filter)(x => x !== null), (0, _operators.shareReplay)());
+  }
+
+  getStyleSheet() {
+    for (let i = 0; i < document.styleSheets.length; i++) {
+      const sheet = document.styleSheets[i];
+      return sheet;
+    }
+  }
+
+  virtualScroll$(selector, friction = 10) {
+    const style = this.getStyleSheet();
+    const ruleIndex = style.insertRule(`.virtual-scroll:after { content: ''; display:block; width: 100%; height: 1px; }`, style.cssRules.length);
+    const rule = style.cssRules[ruleIndex]; // console.log('rule', style.cssRules.length, rule.cssText);
+
+    let outerHeight_ = 0;
+    const node = document.querySelector(selector);
+    node.addEventListener('wheel', event => {
+      // console.log('wheel', event);
+      this.scrollTo(0, this.scrollTop + event.deltaY);
+    });
+    let down = false;
+    let first = true;
+    return this.raf$().pipe((0, _operators.map)(() => {
+      const outerHeight = this.getOuterHeight(node);
+
+      if (outerHeight_ !== outerHeight) {
+        outerHeight_ = outerHeight;
+        rule.style.height = `${outerHeight_}px`; // console.log(rule.style.height);
+      }
+
+      const nodeTop = node.top || 0;
+      const top = down ? -this.scrollTop : tween(nodeTop, -this.scrollTop, first ? 1 : friction);
+
+      if (node.top !== top) {
+        node.top = top;
+        node.style.transform = `translateX(-50%) translateY(${top}px)`; // node.style = `position: fixed; top: 0; transform: translateX(-50%) translateY(${top}px)`;
+
+        first = false;
+        return top;
+      } else {
+        return null;
+      }
+    }), (0, _operators.filter)(x => x !== null), (0, _operators.shareReplay)());
+  }
+
+  addCustomRules() {
+    const sheet = this.addCustomSheet();
+    const body = document.querySelector('body');
+    const node = document.createElement('div');
+    node.style.width = '100px';
+    node.style.height = '100px';
+    node.style.overflow = 'auto';
+    node.style.visibility = 'hidden';
+    node.style.msOverflowStyle = 'scrollbar'; // needed for WinJS apps
+
+    const inner = document.createElement('div');
+    inner.style.width = 'auto';
+    inner.style.height = '200px';
+    node.appendChild(inner);
+    body.appendChild(node);
+    const scrollBarWidth = node.offsetWidth - inner.offsetWidth;
+    body.removeChild(node);
+  }
+
+  addCustomSheet() {
+    const style = document.createElement('style');
+    style.appendChild(document.createTextNode(''));
+    document.head.appendChild(style);
+    return style.sheet;
+  }
+
+  isDescendantOf(node, target) {
+    return DomService.isDescendantOf(node, target);
+  }
+
+  get agent() {
+    return DomService.agent || DomService.detect();
+  }
+
 }
 
 exports.default = DomService;
-DomService.DEFAULT_SCROLL_TARGET = window;
-DomService.rafIntersection_ = {};
-DomService.scrollIntersection_ = {};
-DomService.raf$ = (0, _rxjs.range)(0, Number.POSITIVE_INFINITY, _animationFrame.animationFrame);
-
-DomService.windowRect$ = function () {
-  const windowRect = new _rect.default({
-    width: window.innerWidth,
-    height: window.innerHeight
-  });
-  return (0, _rxjs.fromEvent)(window, 'resize').pipe((0, _operators.map)(originalEvent => {
-    windowRect.width = window.innerWidth;
-    windowRect.height = window.innerHeight;
-    return windowRect;
-  }), (0, _operators.startWith)(windowRect));
-}();
-
-DomService.rafAndRect$ = (0, _rxjs.combineLatest)(DomService.raf$, DomService.windowRect$);
-
-DomService.locomotiveScrollEvent$ = function () {
-  const event = {
-    speed: 0,
-    scrollTop: 0,
-    scrollLeft: 0,
-    direction: 0,
-    originalEvent: null
-  };
-  const locomotiveScroll = new _locomotiveScroll.default({
-    el: document.querySelector('#js-scroll'),
-    smooth: true,
-    getSpeed: true,
-    getDirection: true
-  });
-  return (0, _rxjs.fromEventPattern)(handler => {
-    locomotiveScroll.on('scroll', handler);
-  }, handler => {// !!! locomotiveScroll.removeListener('scroll', handler);
-  }).pipe((0, _operators.map)(instance => {
-    // instance.direction, instance.speed
-    // const progress = instance.scroll.y / instance.limit;
-    event.speed = instance.speed;
-    event.scrollTop = instance.scroll.y;
-    event.direction = instance.direction;
-    return event;
-  }), (0, _operators.startWith)(event), (0, _operators.shareReplay)());
-};
-
-DomService.scrollEvent$ = function () {
-  const target = DomService.DEFAULT_SCROLL_TARGET;
-  let previousTop = DomService.singletonScrollTop(target);
-  const event = {
-    scrollTop: previousTop,
-    scrollLeft: DomService.singletonScrollLeft(target),
-    direction: 0,
-    originalEvent: null
-  };
-  return (0, _rxjs.fromEvent)(target, 'scroll').pipe((0, _operators.auditTime)(16), // 60 fps
-  (0, _operators.map)(originalEvent => {
-    event.scrollTop = DomService.singletonScrollTop(target);
-    event.scrollLeft = DomService.singletonScrollLeft(target);
-    const diff = event.scrollTop - previousTop;
-    event.direction = diff === 0 ? 0 : diff / Math.abs(diff);
-    previousTop = event.scrollTop;
-    event.originalEvent = originalEvent;
-    return event;
-  }), (0, _operators.startWith)(event));
-};
-
-DomService.scroll$ = function () {
-  return DomService.locomotiveScrollEvent$(); // return this.scrollEvent$();
-}();
-
-DomService.scrollAndRect$ = (0, _rxjs.combineLatest)(DomService.scroll$, DomService.windowRect$);
 
 },{"../rect/rect":215,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],204:[function(require,module,exports){
 "use strict";
@@ -18274,7 +18317,11 @@ exports.default = void 0;
 
 var _colors = require("../colors/colors");
 
+var _ease = _interopRequireDefault(require("../ease/ease"));
+
 var _model = _interopRequireDefault(require("../model/model"));
+
+var _title = _interopRequireDefault(require("../title/title"));
 
 var _world = _interopRequireDefault(require("../world/world"));
 
@@ -18298,7 +18345,9 @@ class Example03 {
           world: world,
           render: (instance, time, tick) => {
             const mesh = instance.mesh;
-            const scroll = 0.5 - Math.min(0.5, instance.getScroll());
+
+            const scroll = _ease.default.Sine.In(0.5 - Math.min(0.5, instance.getScroll()));
+
             mesh.rotation.x = deg(180) * scroll; // mesh.rotation.y = deg(180) * scroll;
 
             const scale = instance.scale;
@@ -18314,14 +18363,16 @@ class Example03 {
         });
         return model;
       });
-    });
+    }); // TITLES
+
+    const titles = [...document.querySelectorAll('[title]')].map(node => new _title.default(node));
   }
 
 }
 
 exports.default = Example03;
 
-},{"../colors/colors":202,"../model/model":211,"../world/world":221}],208:[function(require,module,exports){
+},{"../colors/colors":202,"../ease/ease":204,"../model/model":211,"../title/title":220,"../world/world":221}],208:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18454,8 +18505,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 /* jshint esversion: 6 */
 const deg = THREE.Math.degToRad;
 
-const domService = _dom.default.singleton();
-
 class Model {
   constructor(node, options) {
     if (!options) {
@@ -18474,11 +18523,15 @@ class Model {
   }
 
   create(callback) {
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    // const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const geometry = new THREE.IcosahedronBufferGeometry(0.5, 1);
     const material = new THREE.MeshStandardMaterial({
-      color: (0, _colors.nextColor)(),
+      color: (0, _colors.randomColor)(),
       roughness: 0.4,
-      metalness: 0.01
+      metalness: 0.01,
+      flatShading: true,
+      transparent: true,
+      opacity: 0.9
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.renderOrder = 3;
@@ -18502,11 +18555,13 @@ class Model {
     const world = this.world;
     world.scene.add(mesh);
     const node = this.node;
-    domService.scrollIntersection$(node).subscribe(event => {
+
+    _dom.default.scrollIntersection$(node).subscribe(event => {
       this.scroll = event.scroll;
       this.intersection = event.intersection;
       this.calculateScaleAndPosition();
     });
+
     console.log('Model.loaded', mesh);
   }
 
@@ -18560,10 +18615,6 @@ var _texture = _interopRequireDefault(require("../texture/texture"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /* jshint esversion: 6 */
-const deg = THREE.Math.degToRad;
-
-const domService = _dom.default.singleton();
-
 class Picture {
   constructor(node, options) {
     if (!options) {
@@ -18621,11 +18672,13 @@ class Picture {
     const world = this.world;
     world.scene.add(mesh);
     const node = this.node;
-    domService.scrollIntersection$(node).subscribe(event => {
+
+    _dom.default.scrollIntersection$(node).subscribe(event => {
       this.scroll = event.scroll;
       this.intersection = event.intersection;
       this.calculateScaleAndPosition();
     });
+
     console.log('Picture.loaded', mesh);
   }
 
@@ -18712,15 +18765,19 @@ void main() {
 	*/
 	vec4 color = texture2D(uImage, vUv);
 
-	float r = (1.0 - texture2D(uNoise, vUv).r);
-    r = 1.0 - smoothstep(pow, pow + 0.1, r);
+    float r = (1.0 - texture2D(uNoise, vUv).r);
+    // float r = (1.0 - cos(vUv.x * 30.0 + vUv.y * vUv.y * 20.0) * sin(vUv.y * 30.0 - vUv.x * vUv.x * 20.0) * 0.9);
+    r = clamp(r, 0.0, 1.0);
+	r = 1.0 - smoothstep(pow, pow + 0.1, r);
+	// r = smoothstep(0.7, 0.75, r);
     r = clamp(r, 0.0, 1.0);
 
 	color.a *= uOpacity * r;
 	// if (color.a < 0.001) discard;
 	// gl_FragColor = mix(vec4(1.0, 1.0, 1.0, color.a), color, pow);
 	gl_FragColor = color;
-	gl_FragColor.rgb *= gl_FragColor.a;
+	// gl_FragColor.rgb *= gl_FragColor.a;
+	// gl_FragColor = vec4(vec3(n), 1.0);
 }
 `;
 exports.DEFAULT_FRAGMENT_SHADER = DEFAULT_FRAGMENT_SHADER;
@@ -18817,9 +18874,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 /* jshint esversion: 6 */
 const deg = THREE.Math.degToRad;
-
-const domService = _dom.default.singleton();
-
 const PlaneGeometry = new THREE.PlaneBufferGeometry(1, 1, 20, 20);
 exports.PlaneGeometry = PlaneGeometry;
 
@@ -18877,11 +18931,13 @@ class Plane {
     const world = this.world;
     world.scene.add(mesh);
     const node = this.node;
-    domService.scrollIntersection$(node).subscribe(event => {
+
+    _dom.default.scrollIntersection$(node).subscribe(event => {
       this.scroll = event.scroll;
       this.intersection = event.intersection;
       this.calculateScaleAndPosition();
     });
+
     console.log('Plane.loaded', mesh);
   }
 
@@ -19255,8 +19311,6 @@ var _ease = _interopRequireDefault(require("../ease/ease"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /* jshint esversion: 6 */
-const domService = _dom.default.singleton();
-
 class Title {
   constructor(node) {
     this.node = node;
@@ -19266,7 +19320,8 @@ class Title {
       key: null
     })[0];
     this.splitting = splitting;
-    domService.scrollIntersection$(node, 2).subscribe(event => {
+
+    _dom.default.scrollIntersection$(node, 2).subscribe(event => {
       this.update(event.intersection, event.rect, event.windowRect);
     });
   }

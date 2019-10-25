@@ -3,8 +3,6 @@
 import DomService from '../dom/dom.service';
 import Ease from '../ease/ease';
 
-const domService = DomService.singleton();
-
 export default class Title {
 
 	constructor(node) {
@@ -15,7 +13,7 @@ export default class Title {
 			key: null
 		})[0];
 		this.splitting = splitting;
-		domService.scrollIntersection$(node, 2).subscribe(event => {
+		DomService.scrollIntersection$(node, 2).subscribe(event => {
 			this.update(event.intersection, event.rect, event.windowRect);
 		});
 	}

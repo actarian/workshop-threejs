@@ -17,6 +17,14 @@
 	.section {
 		position: relative;
 
+		&:first-child {
+			padding-top: 50vh;
+		}
+
+		&:last-child {
+			padding-bottom: 50vh;
+		}
+
 		.container {
 			height: 100vh; // calc(100vh - 80px);
 			display: flex;

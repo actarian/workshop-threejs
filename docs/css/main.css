@@ -329,6 +329,10 @@ body {
     body {
       font-size: 16px; } }
 
+b,
+strong {
+  font-weight: 600; }
+
 .h1,
 .h2,
 .h3,
@@ -2950,6 +2954,53 @@ button,
       .group--cta > .btn + .btn {
         margin-top: 15px; } }
 
+@-webkit-keyframes slide-in-blurred-top {
+  0% {
+    -webkit-transform: translateX(-50%) translateY(-300%) scaleY(2.5) scaleX(0.2);
+            transform: translateX(-50%) translateY(-300%) scaleY(2.5) scaleX(0.2);
+    -webkit-transform-origin: 50% 0%;
+            transform-origin: 50% 0%;
+    -webkit-filter: blur(40px);
+            filter: blur(40px);
+    opacity: 0; }
+  100% {
+    -webkit-transform: translateX(-50%) translateY(-50%) scaleY(1) scaleX(1);
+            transform: translateX(-50%) translateY(-50%) scaleY(1) scaleX(1);
+    -webkit-transform-origin: 50% 50%;
+            transform-origin: 50% 50%;
+    -webkit-filter: blur(0);
+            filter: blur(0);
+    opacity: 1; } }
+
+@keyframes slide-in-blurred-top {
+  0% {
+    -webkit-transform: translateX(-50%) translateY(-300%) scaleY(2.5) scaleX(0.2);
+            transform: translateX(-50%) translateY(-300%) scaleY(2.5) scaleX(0.2);
+    -webkit-transform-origin: 50% 0%;
+            transform-origin: 50% 0%;
+    -webkit-filter: blur(40px);
+            filter: blur(40px);
+    opacity: 0; }
+  100% {
+    -webkit-transform: translateX(-50%) translateY(-50%) scaleY(1) scaleX(1);
+            transform: translateX(-50%) translateY(-50%) scaleY(1) scaleX(1);
+    -webkit-transform-origin: 50% 50%;
+            transform-origin: 50% 50%;
+    -webkit-filter: blur(0);
+            filter: blur(0);
+    opacity: 1; } }
+
+.down-arrow {
+  position: absolute;
+  top: 50vh;
+  left: 50%;
+  -webkit-transform: translateX(-50%) translateY(-50%);
+          transform: translateX(-50%) translateY(-50%);
+  font-size: 4vw;
+  color: white;
+  -webkit-animation: slide-in-blurred-top 1.5s 1s cubic-bezier(0.23, 1, 0.32, 1) infinite both;
+          animation: slide-in-blurred-top 1.5s 1s cubic-bezier(0.23, 1, 0.32, 1) infinite both; }
+
 .section--index {
   position: relative;
   display: -webkit-box;
@@ -3042,8 +3093,7 @@ img {
       top: 25%;
       width: 25%;
       height: 50%;
-      pointer-events: none;
-      background: rgba(255, 0, 0, 0.1); }
+      pointer-events: none; }
     .example-03 .section:nth-child(odd) [model] {
       left: 12.5%; }
     .example-03 .section:nth-child(even) [model] {
@@ -3060,6 +3110,10 @@ img {
 
 .example-04 .section {
   position: relative; }
+  .example-04 .section:first-child {
+    padding-top: 50vh; }
+  .example-04 .section:last-child {
+    padding-bottom: 50vh; }
   .example-04 .section .container {
     height: 100vh;
     display: -webkit-box;

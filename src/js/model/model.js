@@ -1,12 +1,10 @@
 /* jshint esversion: 6 */
 
-import { nextColor } from '../colors/colors';
+import { randomColor } from '../colors/colors';
 import DomService from '../dom/dom.service';
 import Ease from '../ease/ease';
 
 const deg = THREE.Math.degToRad;
-
-const domService = DomService.singleton();
 
 export default class Model {
 
@@ -25,11 +23,15 @@ export default class Model {
 	}
 
 	create(callback) {
-		const geometry = new THREE.BoxGeometry(1, 1, 1);
+		// const geometry = new THREE.BoxGeometry(1, 1, 1);
+		const geometry = new THREE.IcosahedronBufferGeometry(0.5, 1);
 		const material = new THREE.MeshStandardMaterial({
-			color: nextColor(),
+			color: randomColor(),
 			roughness: 0.4,
 			metalness: 0.01,
+			flatShading: true,
+			transparent: true,
+			opacity: 0.9,
 		});
 		const mesh = new THREE.Mesh(geometry, material);
 		mesh.renderOrder = 3;
@@ -49,7 +51,7 @@ export default class Model {
 		const world = this.world;
 		world.scene.add(mesh);
 		const node = this.node;
-		domService.scrollIntersection$(node).subscribe(event => {
+		DomService.scrollIntersection$(node).subscribe(event => {
 			this.scroll = event.scroll;
 			this.intersection = event.intersection;
 			this.calculateScaleAndPosition();

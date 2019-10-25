@@ -4,7 +4,6 @@ import { hexToInt, nextHex } from '../colors/colors';
 import DomService from '../dom/dom.service';
 
 const deg = THREE.Math.degToRad;
-const domService = DomService.singleton();
 export const PlaneGeometry = new THREE.PlaneBufferGeometry(1, 1, 20, 20);
 
 export default class Plane {
@@ -57,7 +56,7 @@ export default class Plane {
 		const world = this.world;
 		world.scene.add(mesh);
 		const node = this.node;
-		domService.scrollIntersection$(node).subscribe(event => {
+		DomService.scrollIntersection$(node).subscribe(event => {
 			this.scroll = event.scroll;
 			this.intersection = event.intersection;
 			this.calculateScaleAndPosition();

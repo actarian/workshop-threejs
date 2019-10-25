@@ -43,15 +43,19 @@ void main() {
 	*/
 	vec4 color = texture2D(uImage, vUv);
 
-	float r = (1.0 - texture2D(uNoise, vUv).r);
-    r = 1.0 - smoothstep(pow, pow + 0.1, r);
+    float r = (1.0 - texture2D(uNoise, vUv).r);
+    // float r = (1.0 - cos(vUv.x * 30.0 + vUv.y * vUv.y * 20.0) * sin(vUv.y * 30.0 - vUv.x * vUv.x * 20.0) * 0.9);
+    r = clamp(r, 0.0, 1.0);
+	r = 1.0 - smoothstep(pow, pow + 0.1, r);
+	// r = smoothstep(0.7, 0.75, r);
     r = clamp(r, 0.0, 1.0);
 
 	color.a *= uOpacity * r;
 	// if (color.a < 0.001) discard;
 	// gl_FragColor = mix(vec4(1.0, 1.0, 1.0, color.a), color, pow);
 	gl_FragColor = color;
-	gl_FragColor.rgb *= gl_FragColor.a;
+	// gl_FragColor.rgb *= gl_FragColor.a;
+	// gl_FragColor = vec4(vec3(n), 1.0);
 }
 `;
 

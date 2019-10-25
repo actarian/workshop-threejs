@@ -1,7 +1,9 @@
 /* jshint esversion: 6 */
 
 import { nextHex } from '../colors/colors';
+import Ease from '../ease/ease';
 import Model from '../model/model';
+import Title from '../title/title';
 import World from '../world/world';
 
 const deg = THREE.Math.degToRad;
@@ -24,7 +26,7 @@ export default class Example03 {
 					world: world,
 					render: (instance, time, tick) => {
 						const mesh = instance.mesh;
-						const scroll = 0.5 - Math.min(0.5, instance.getScroll());
+						const scroll = Ease.Sine.In(0.5 - Math.min(0.5, instance.getScroll()));
 						mesh.rotation.x = deg(180) * scroll;
 						// mesh.rotation.y = deg(180) * scroll;
 						const scale = instance.scale;
@@ -41,6 +43,9 @@ export default class Example03 {
 				return model;
 			});
 		});
+
+		// TITLES
+		const titles = [...document.querySelectorAll('[title]')].map(node => new Title(node));
 	}
 
 }
