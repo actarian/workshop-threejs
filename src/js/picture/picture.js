@@ -1,11 +1,11 @@
 /* jshint esversion: 6 */
 
 import DomService from '../dom/dom.service';
+import { PlaneGeometry } from '../plane/plane';
 import Texture from '../texture/texture';
 
 const deg = THREE.Math.degToRad;
 const domService = DomService.singleton();
-const geometry = new THREE.PlaneBufferGeometry(1, 1, 20, 20);
 
 export default class Picture {
 
@@ -29,7 +29,7 @@ export default class Picture {
 		const texture = Texture.load(this.node.getAttribute('picture'), this.world.renderer, (texture) => {
 			this.node.style.paddingBottom = `${texture.image.naturalHeight / texture.image.naturalWidth * 100}%`;
 			const material = this.getMaterial(texture);
-			const mesh = new THREE.Mesh(geometry, material);
+			const mesh = new THREE.Mesh(PlaneGeometry, material);
 			mesh.renderOrder = 2;
 			if (typeof callback === 'function') {
 				callback(mesh);

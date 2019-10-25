@@ -1,8 +1,10 @@
 .example-03 {
 
+	/*
 	main {
-		// padding: calc(50vh - 20px) 0;
+		padding: calc(50vh - 20px) 0;
 	}
+	*/
 
 	.world {
 		position: fixed;
@@ -16,6 +18,14 @@
 
 	.section {
 		position: relative;
+
+		&:first-child {
+			padding-top: 50vh;
+		}
+
+		&:last-child {
+			padding-bottom: 50vh;
+		}
 
 		.container {
 			height: calc(100vh - 80px);

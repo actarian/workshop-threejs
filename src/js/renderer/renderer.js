@@ -11,7 +11,7 @@ export default class Renderer extends THREE.WebGLRenderer {
 			// preserveDrawingBuffer: false,
 			alpha: true,
 		});
-		this.setClearColor(0xffffff, 0);
+		this.setClearColor(0x000000, 0);
 		this.setPixelRatio(Math.max(window.devicePixelRatio, MIN_DEVICE_PIXEL_RATIO));
 		this.setSize(container.offsetWidth, container.offsetHeight);
 		container.appendChild(this.domElement);

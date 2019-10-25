@@ -5,7 +5,7 @@ import DomService from '../dom/dom.service';
 
 const deg = THREE.Math.degToRad;
 const domService = DomService.singleton();
-const geometry = new THREE.PlaneBufferGeometry(1, 1, 20, 20);
+export const PlaneGeometry = new THREE.PlaneBufferGeometry(1, 1, 20, 20);
 
 export default class Plane {
 
@@ -28,7 +28,7 @@ export default class Plane {
 	create(callback) {
 		const hex = this.node.getAttribute('plane') || nextHex();
 		const material = this.getMaterial(hexToInt(hex));
-		const mesh = new THREE.Mesh(geometry, material);
+		const mesh = new THREE.Mesh(PlaneGeometry, material);
 		mesh.renderOrder = 1;
 		if (typeof callback === 'function') {
 			callback(mesh);

@@ -17693,15 +17693,15 @@ DomService.locomotiveScrollEvent$ = function () {
     direction: 0,
     originalEvent: null
   };
-  const scroll = new _locomotiveScroll.default({
+  const locomotiveScroll = new _locomotiveScroll.default({
     el: document.querySelector('#js-scroll'),
     smooth: true,
     getSpeed: true,
     getDirection: true
   });
   return (0, _rxjs.fromEventPattern)(handler => {
-    scroll.on('scroll', handler);
-  }, handler => {// !!! scroll.removeListener('scroll', handler);
+    locomotiveScroll.on('scroll', handler);
+  }, handler => {// !!! locomotiveScroll.removeListener('scroll', handler);
   }).pipe((0, _operators.map)(instance => {
     // instance.direction, instance.speed
     // const progress = instance.scroll.y / instance.limit;
@@ -18298,7 +18298,7 @@ class Example03 {
           world: world,
           render: (instance, time, tick) => {
             const mesh = instance.mesh;
-            const scroll = instance.getScroll();
+            const scroll = 0.5 - Math.min(0.5, instance.getScroll());
             mesh.rotation.x = deg(180) * scroll; // mesh.rotation.y = deg(180) * scroll;
 
             const scale = instance.scale;
@@ -18306,9 +18306,9 @@ class Example03 {
             const position = instance.position; // mesh.position.set(position.x, position.y + 2.5 - scroll * 5, position.z);
 
             if (index % 2 === 0) {
-              mesh.position.set(position.x + 2.5 - scroll * 5, position.y, position.z);
+              mesh.position.set(position.x - 6.5 * scroll, position.y, position.z);
             } else {
-              mesh.position.set(position.x - 2.5 + scroll * 5, position.y, position.z);
+              mesh.position.set(position.x + 6.5 * scroll, position.y, position.z);
             }
           }
         });
@@ -18373,6 +18373,11 @@ class Example04 {
             mesh.scale.set(scale.x, scale.y, scale.z);
             const position = instance.position;
             mesh.position.set(position.x, position.y, position.z);
+            /*
+            if (index === 1) {
+            	console.log(instance.intersection.pow.y);
+            }
+            */
           }
         });
         return picture;
@@ -18548,6 +18553,8 @@ exports.default = void 0;
 
 var _dom = _interopRequireDefault(require("../dom/dom.service"));
 
+var _plane = require("../plane/plane");
+
 var _texture = _interopRequireDefault(require("../texture/texture"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -18556,8 +18563,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 const deg = THREE.Math.degToRad;
 
 const domService = _dom.default.singleton();
-
-const geometry = new THREE.PlaneBufferGeometry(1, 1, 20, 20);
 
 class Picture {
   constructor(node, options) {
@@ -18582,7 +18587,7 @@ class Picture {
     const texture = _texture.default.load(this.node.getAttribute('picture'), this.world.renderer, texture => {
       this.node.style.paddingBottom = `${texture.image.naturalHeight / texture.image.naturalWidth * 100}%`;
       const material = this.getMaterial(texture);
-      const mesh = new THREE.Mesh(geometry, material);
+      const mesh = new THREE.Mesh(_plane.PlaneGeometry, material);
       mesh.renderOrder = 2;
 
       if (typeof callback === 'function') {
@@ -18647,13 +18652,17 @@ class Picture {
 
 exports.default = Picture;
 
-},{"../dom/dom.service":203,"../texture/texture":218}],213:[function(require,module,exports){
+},{"../dom/dom.service":203,"../plane/plane":214,"../texture/texture":218}],213:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = exports.DEFAULT_FRAGMENT_SHADER = exports.DEFAULT_VERTEX_SHADER = void 0;
+
+var _plane = require("../plane/plane");
+
+var _texture = _interopRequireDefault(require("../texture/texture"));
 
 var _picture = _interopRequireDefault(require("./picture"));
 
@@ -18669,6 +18678,7 @@ uniform float uTime;
 uniform float uPow;
 uniform float uSpeed;
 uniform sampler2D uImage;
+uniform sampler2D uNoise;
 void main() {
 	vUv = uv;
 	vec3 vPosition = position;
@@ -18692,15 +18702,24 @@ uniform float uTime;
 uniform float uPow;
 uniform float uSpeed;
 uniform sampler2D uImage;
+uniform sampler2D uNoise;
 void main() {
 	float pow = clamp(uPow + 0.5, 0.0, 1.0);
+	/*
 	float s = uSpeed * -0.05;
 	vec2 p = vec2(vUv.x + cos(vUv.x - 0.5 + s) * s * (1.0 - pow), vUv.y + sin(vUv.y * 0.1 - 0.5 + s) * s * (1.0 - pow));
 	vec4 color = texture2D(uImage, p);
-	// vec4 color = texture2D(uImage, vUv);
-	color.a *= uOpacity;
-	if (color.a < 0.01) discard;
-	gl_FragColor = mix(vec4(1.0, 1.0, 1.0, color.a), color, pow);
+	*/
+	vec4 color = texture2D(uImage, vUv);
+
+	float r = (1.0 - texture2D(uNoise, vUv).r);
+    r = 1.0 - smoothstep(pow, pow + 0.1, r);
+    r = clamp(r, 0.0, 1.0);
+
+	color.a *= uOpacity * r;
+	// if (color.a < 0.001) discard;
+	// gl_FragColor = mix(vec4(1.0, 1.0, 1.0, color.a), color, pow);
+	gl_FragColor = color;
 	gl_FragColor.rgb *= gl_FragColor.a;
 }
 `;
@@ -18713,7 +18732,21 @@ class PictureShader extends _picture.default {
     super(node, options);
   }
 
-  getMaterial(texture) {
+  create(callback) {
+    _texture.default.loadMany$([this.node.getAttribute('picture'), 'three/noise/noise-01.png'], this.world.renderer).subscribe(textures => {
+      const texture = textures[0];
+      this.node.style.paddingBottom = `${texture.image.naturalHeight / texture.image.naturalWidth * 100}%`;
+      const material = this.getMaterial(textures);
+      const mesh = new THREE.Mesh(_plane.PlaneGeometry, material);
+      mesh.renderOrder = 2;
+
+      if (typeof callback === 'function') {
+        callback(mesh);
+      }
+    });
+  }
+
+  getMaterial(textures) {
     const vertexShader = this.vertexShader;
     const fragmentShader = this.fragmentShader;
     const material = new THREE.ShaderMaterial({
@@ -18722,7 +18755,11 @@ class PictureShader extends _picture.default {
       uniforms: {
         uImage: {
           type: 't',
-          value: texture
+          value: textures[0]
+        },
+        uNoise: {
+          type: 't',
+          value: textures[1]
         },
         uOpacity: {
           type: 'f',
@@ -18745,6 +18782,7 @@ class PictureShader extends _picture.default {
           value: new THREE.Vector2(window.innerWidth, window.innerHeight).multiplyScalar(window.devicePixelRatio)
         }
       },
+      transparent: true,
       side: THREE.DoubleSide
     });
     return material;
@@ -18763,13 +18801,13 @@ class PictureShader extends _picture.default {
 
 exports.default = PictureShader;
 
-},{"./picture":212}],214:[function(require,module,exports){
+},{"../plane/plane":214,"../texture/texture":218,"./picture":212}],214:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports.default = exports.PlaneGeometry = void 0;
 
 var _colors = require("../colors/colors");
 
@@ -18782,7 +18820,8 @@ const deg = THREE.Math.degToRad;
 
 const domService = _dom.default.singleton();
 
-const geometry = new THREE.PlaneBufferGeometry(1, 1, 20, 20);
+const PlaneGeometry = new THREE.PlaneBufferGeometry(1, 1, 20, 20);
+exports.PlaneGeometry = PlaneGeometry;
 
 class Plane {
   constructor(node, options) {
@@ -18806,7 +18845,7 @@ class Plane {
   create(callback) {
     const hex = this.node.getAttribute('plane') || (0, _colors.nextHex)();
     const material = this.getMaterial((0, _colors.hexToInt)(hex));
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(PlaneGeometry, material);
     mesh.renderOrder = 1;
 
     if (typeof callback === 'function') {
@@ -18961,7 +19000,7 @@ class Rect {
     return Rect.intersectRect(this, rect);
   }
 
-  intersection(rect, mode = 1) {
+  intersection(rect) {
     const intersection = this.intersection_ || (this.intersection_ = {
       left: 0,
       top: 0,
@@ -18973,30 +19012,15 @@ class Rect {
         x: -1,
         y: -1
       },
-      offset: function (offset, mode) {
+      offset: function (offset) {
         offset = offset || 0;
-        let min, max;
-
-        if (mode === 1) {
-          min = -this.height;
-          max = this.rect.height + this.height;
-        } else {
-          min = this.rect.height * 0.1;
-          max = this.rect.height - this.height;
-        }
-
-        let pow = 0.5 - (this.top + offset - min) / max; // pow = Math.max(0, Math.min(1, pow));
-
+        const pow = (this.top - this.rect.height / 2 + offset) / -this.height;
         return pow;
       },
       scroll: function (offset) {
         offset = offset || 0;
-        let min, max;
-        min = -this.height;
-        max = this.rect.height + this.height;
-        let scroll = 0.5 - (this.top + offset - min) / max; // scroll = Math.max(0, Math.min(1, scroll));
-
-        return scroll + 0.5;
+        const pow = (this.top - this.rect.height / 2 + offset) / -this.height;
+        return pow;
       }
     });
     intersection.left = this.left;
@@ -19006,36 +19030,9 @@ class Rect {
     intersection.x = this.left + this.width / 2;
     intersection.y = this.top + this.height / 2;
     intersection.rect = rect;
-    const pow = intersection.offset(0, mode);
+    const pow = intersection.offset(0);
     intersection.pow.y = pow;
     return intersection;
-  }
-
-  intersection___(rect) {
-    const center = {
-      x: (this.center.x - rect.center.x) / (rect.width / 2),
-      y: (this.center.y - rect.center.y) / (rect.height / 2)
-    };
-
-    if (this.intersect(rect)) {
-      const dx = this.left > rect.left ? 0 : Math.abs(rect.left - this.left);
-      const dy = this.top > rect.top ? 0 : Math.abs(rect.top - this.top);
-      let x = dx ? 1 - dx / this.width : (rect.left + rect.width - this.left) / this.width;
-      let y = dy ? 1 - dy / this.height : (rect.top + rect.height - this.top) / this.height;
-      x = Math.min(1, x);
-      y = Math.min(1, y);
-      return {
-        x: x,
-        y: y,
-        center: center
-      };
-    } else {
-      return {
-        x: 0,
-        y: 0,
-        center: center
-      };
-    }
   }
 
 }
@@ -19061,7 +19058,7 @@ class Renderer extends THREE.WebGLRenderer {
       // preserveDrawingBuffer: false,
       alpha: true
     });
-    this.setClearColor(0xffffff, 0);
+    this.setClearColor(0x000000, 0);
     this.setPixelRatio(Math.max(window.devicePixelRatio, MIN_DEVICE_PIXEL_RATIO));
     this.setSize(container.offsetWidth, container.offsetHeight);
     container.appendChild(this.domElement);
@@ -19103,15 +19100,49 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
+var _rxjs = require("rxjs");
+
+var _operators = require("rxjs/operators");
+
 /* jshint esversion: 6 */
-const loader = new THREE.TextureLoader();
+const manager = new THREE.LoadingManager();
+const cache = {};
 
 class Texture {
+  static defaults(texture, renderer) {
+    texture.anisotropy = renderer.capabilities.getMaxAnisotropy(); // texture.wrapS = THREE.RepeatWrapping;
+    // texture.wrapT = THREE.RepeatWrapping;
+
+    return texture;
+  }
+
+  static load$(path, renderer) {
+    if (cache[path]) {
+      return (0, _rxjs.of)(cache[path]);
+    }
+
+    return (0, _rxjs.fromEventPattern)(handler => {
+      return new THREE.TextureLoader(manager).load(path, handler);
+    }, handler => {// can't remove !!!
+    }).pipe((0, _operators.map)(texture => {
+      texture = this.defaults(texture, renderer);
+      cache[path] = texture;
+      return texture;
+    }));
+  }
+
+  static loadMany$(paths, renderer) {
+    return (0, _rxjs.combineLatest)(paths.map(x => this.load$(x, renderer)));
+  }
+
   static load(path, renderer, callback) {
-    const texture = loader.load(path, texture => {
-      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
+    if (cache[path]) {
+      return cache[path];
+    }
+
+    const texture = new THREE.TextureLoader(manager).load(path, texture => {
+      texture = this.defaults(texture, renderer);
+      cache[path] = texture;
 
       if (typeof callback === 'function') {
         callback(texture);
@@ -19121,7 +19152,7 @@ class Texture {
   }
 
   static loadEquirectangularToCube(path, renderer, callback) {
-    loader.load(path, texture => {
+    return new THREE.TextureLoader(manager).load(path, texture => {
       texture.encoding = THREE.sRGBEncoding;
       const generator = new THREE.EquirectangularToCubeGenerator(texture, {
         resolution: 512
@@ -19155,7 +19186,7 @@ class Texture {
 
 exports.default = Texture;
 
-},{}],219:[function(require,module,exports){
+},{"rxjs":2,"rxjs/operators":200}],219:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19246,28 +19277,22 @@ class Title {
     const h = node.offsetHeight;
     const direction = node.getAttribute('title') || 'left';
     const tweens = splitting.chars.map((char, index) => {
-      // const index = getComputedStyle(char).getPropertyValue('--char-index');
+      let i;
+
       if (direction === 'left') {
-        const i = splitting.chars.length - index;
-        let pow = intersection.offset(100 + i * 50, 2);
-        pow = Math.max(0, Math.min(1, pow + 1)); // to 0-1
-
-        pow = _ease.default.Expo.InOut(pow);
-        TweenMax.set(char, {
-          x: -(5 + 0.1 * i) * (h * 0.1) * (1 - pow),
-          opacity: pow
-        });
+        i = splitting.chars.length - index;
       } else {
-        const i = index;
-        let pow = intersection.offset(100 + i * 50, 2);
-        pow = Math.max(0, Math.min(1, pow + 1)); // to 0-1
-
-        pow = _ease.default.Expo.InOut(pow);
-        TweenMax.set(char, {
-          x: (5 + 0.1 * i) * (h * 0.1) * (1 - pow),
-          opacity: pow
-        });
+        i = index;
       }
+
+      let pow = intersection.offset((i - splitting.chars.length) * 50);
+      pow = Math.max(0, Math.min(1, pow + 1)); // to 0-1
+
+      pow = _ease.default.Sine.InOut(pow);
+      TweenMax.set(char, {
+        x: (5 + 0.1 * i) * (h * 0.1) * (1 - pow),
+        opacity: pow
+      }); // const index = getComputedStyle(char).getPropertyValue('--char-index');
     });
   }
 

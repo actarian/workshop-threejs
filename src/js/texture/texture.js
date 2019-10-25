@@ -1,14 +1,49 @@
 /* jshint esversion: 6 */
 
-const loader = new THREE.TextureLoader();
+import { combineLatest, fromEventPattern, of } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+const manager = new THREE.LoadingManager();
+
+const cache = {};
 
 export default class Texture {
 
+	static defaults(texture, renderer) {
+		texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+		// texture.wrapS = THREE.RepeatWrapping;
+		// texture.wrapT = THREE.RepeatWrapping;
+		return texture;
+	}
+
+	static load$(path, renderer) {
+		if (cache[path]) {
+			return of(cache[path]);
+		}
+		return fromEventPattern((handler) => {
+			return new THREE.TextureLoader(manager).load(path, handler);
+		}, (handler) => {
+			// can't remove !!!
+		}).pipe(
+			map((texture) => {
+				texture = this.defaults(texture, renderer);
+				cache[path] = texture;
+				return texture;
+			})
+		);
+	}
+
+	static loadMany$(paths, renderer) {
+		return combineLatest(paths.map(x => this.load$(x, renderer)));
+	}
+
 	static load(path, renderer, callback) {
-		const texture = loader.load(path, (texture) => {
-			texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-			texture.wrapS = THREE.RepeatWrapping;
-			texture.wrapT = THREE.RepeatWrapping;
+		if (cache[path]) {
+			return cache[path];
+		}
+		const texture = new THREE.TextureLoader(manager).load(path, (texture) => {
+			texture = this.defaults(texture, renderer);
+			cache[path] = texture;
 			if (typeof callback === 'function') {
 				callback(texture);
 			}
@@ -17,7 +52,7 @@ export default class Texture {
 	}
 
 	static loadEquirectangularToCube(path, renderer, callback) {
-		loader.load(path, (texture) => {
+		return new THREE.TextureLoader(manager).load(path, (texture) => {
 			texture.encoding = THREE.sRGBEncoding;
 			const generator = new THREE.EquirectangularToCubeGenerator(texture, { resolution: 512 });
 			const background = generator.renderTarget;

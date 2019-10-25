@@ -84,7 +84,7 @@ export default class Rect {
 		return Rect.intersectRect(this, rect);
 	}
 
-	intersection(rect, mode = 1) {
+	intersection(rect) {
 		const intersection = this.intersection_ || (this.intersection_ = {
 			left: 0,
 			top: 0,
@@ -96,28 +96,15 @@ export default class Rect {
 				x: -1,
 				y: -1
 			},
-			offset: function(offset, mode) {
+			offset: function(offset) {
 				offset = offset || 0;
-				let min, max;
-				if (mode === 1) {
-					min = -this.height;
-					max = this.rect.height + this.height;
-				} else {
-					min = this.rect.height * 0.1;
-					max = this.rect.height - this.height;
-				}
-				let pow = 0.5 - (this.top + offset - min) / max;
-				// pow = Math.max(0, Math.min(1, pow));
+				const pow = (this.top - this.rect.height / 2 + offset) / -this.height;
 				return pow;
 			},
 			scroll: function(offset) {
 				offset = offset || 0;
-				let min, max;
-				min = -this.height;
-				max = this.rect.height + this.height;
-				let scroll = 0.5 - (this.top + offset - min) / max;
-				// scroll = Math.max(0, Math.min(1, scroll));
-				return scroll + 0.5;
+				const pow = (this.top - this.rect.height / 2 + offset) / -this.height;
+				return pow;
 			}
 		});
 		intersection.left = this.left;
@@ -127,31 +114,9 @@ export default class Rect {
 		intersection.x = this.left + this.width / 2;
 		intersection.y = this.top + this.height / 2;
 		intersection.rect = rect;
-		const pow = intersection.offset(0, mode);
+		const pow = intersection.offset(0);
 		intersection.pow.y = pow;
 		return intersection;
-	}
-
-	intersection___(rect) {
-		const center = {
-			x: (this.center.x - rect.center.x) / (rect.width / 2),
-			y: (this.center.y - rect.center.y) / (rect.height / 2),
-		};
-		if (this.intersect(rect)) {
-			const dx = this.left > rect.left ? 0 : Math.abs(rect.left - this.left);
-			const dy = this.top > rect.top ? 0 : Math.abs(rect.top - this.top);
-			let x = dx ? (1 - dx / this.width) : ((rect.left + rect.width) - this.left) / this.width;
-			let y = dy ? (1 - dy / this.height) : ((rect.top + rect.height) - this.top) / this.height;
-			x = Math.min(1, x);
-			y = Math.min(1, y);
-			return {
-				x: x,
-				y: y,
-				center: center
-			};
-		} else {
-			return { x: 0, y: 0, center: center };
-		}
 	}
 
 }

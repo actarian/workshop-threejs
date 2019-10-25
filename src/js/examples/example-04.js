@@ -42,6 +42,11 @@ export default class Example04 {
 						mesh.scale.set(scale.x, scale.y, scale.z);
 						const position = instance.position;
 						mesh.position.set(position.x, position.y, position.z);
+						/*
+						if (index === 1) {
+							console.log(instance.intersection.pow.y);
+						}
+						*/
 					}
 				});
 				return picture;

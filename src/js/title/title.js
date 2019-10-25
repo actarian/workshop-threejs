@@ -26,26 +26,20 @@ export default class Title {
 		const h = node.offsetHeight;
 		const direction = node.getAttribute('title') || 'left';
 		const tweens = splitting.chars.map((char, index) => {
-			// const index = getComputedStyle(char).getPropertyValue('--char-index');
+			let i;
 			if (direction === 'left') {
-				const i = (splitting.chars.length - index);
-				let pow = intersection.offset(100 + i * 50, 2);
-				pow = Math.max(0, Math.min(1, pow + 1)); // to 0-1
-				pow = Ease.Expo.InOut(pow);
-				TweenMax.set(char, {
-					x: -(5 + 0.1 * i) * (h * 0.1) * (1 - pow),
-					opacity: pow
-				});
+				i = (splitting.chars.length - index);
 			} else {
-				const i = index;
-				let pow = intersection.offset(100 + i * 50, 2);
-				pow = Math.max(0, Math.min(1, pow + 1)); // to 0-1
-				pow = Ease.Expo.InOut(pow);
-				TweenMax.set(char, {
-					x: (5 + 0.1 * i) * (h * 0.1) * (1 - pow),
-					opacity: pow
-				});
+				i = index;
 			}
+			let pow = intersection.offset((i - splitting.chars.length) * 50);
+			pow = Math.max(0, Math.min(1, pow + 1)); // to 0-1
+			pow = Ease.Sine.InOut(pow);
+			TweenMax.set(char, {
+				x: (5 + 0.1 * i) * (h * 0.1) * (1 - pow),
+				opacity: pow
+			});
+			// const index = getComputedStyle(char).getPropertyValue('--char-index');
 		});
 	}
 
