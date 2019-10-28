@@ -66,10 +66,11 @@ function locomotiveScrollEvent$() {
 	}, (handler) => {
 		// !!! locomotiveScroll.removeListener('scroll', handler);
 	}).pipe(
+		// auditTime(1000 / 60),
 		map((instance) => {
 			// instance.direction, instance.speed
-			const progress = instance.scroll.y / instance.limit;
-			console.log('progress', progress);
+			// const progress = instance.scroll.y / instance.limit;
+			// console.log('progress', progress);
 			event.speed = instance.speed;
 			event.scrollTop = instance.scroll.y;
 			event.direction = instance.direction;

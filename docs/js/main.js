@@ -17109,7 +17109,7 @@ class Camera extends THREE.PerspectiveCamera {
 
 exports.default = Camera;
 
-},{"../rect/rect":216}],202:[function(require,module,exports){
+},{"../rect/rect":217}],202:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17207,6 +17207,98 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
+var _mutation = _interopRequireDefault(require("../mutation/mutation"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+class Component {
+  constructor(node) {
+    this.node = node;
+    const input = node.getAttribute('[input]');
+    const inputValue = eval(input);
+    console.log(input, inputValue);
+    const output = node.getAttribute('(output)'); // Code you want to evaluate
+
+    const code = `return ${output}`; // What you want "this" bound to:
+
+    const scope = {
+      $event: 100
+    }; // Now do this:
+
+    const outputValue = new Function(code).call(scope); // const outputValue = eval(output);
+
+    console.log(output, outputValue);
+  }
+
+  init() {
+    console.log('Component.init');
+    this.node.innerHTML = 'Component';
+    this.node.style.background = 'rgba(255,0,0,0.1)';
+  }
+
+  destroy() {
+    console.log('Component.destroy');
+  }
+
+  static init() {
+    // console.log(this.selector);
+    const store = {
+      instances: {}
+    };
+
+    _mutation.default.added$(this.selector).subscribe(added => {
+      added.forEach(node => {
+        const index = Object.keys(store.instances).length;
+        const key = `${this.selector}-${index}`;
+        node.setAttribute(this.selector, key);
+        const instance = new this(node);
+
+        if (typeof instance.init === 'function') {
+          instance.init();
+        }
+
+        store.instances[key] = instance;
+      });
+      /*
+      console.log(added.length);
+      console.log(added);
+      */
+    });
+
+    _mutation.default.removed$(this.selector).subscribe(removed => {
+      removed.forEach(node => {
+        const key = node.getAttribute(this.selector);
+        const instance = store.instances[key];
+
+        if (typeof instance.destroy === 'function') {
+          instance.destroy();
+        }
+
+        delete store.instances[key];
+      });
+      /*
+      console.log(removed.length);
+      console.log(removed);
+      */
+    });
+  }
+
+}
+
+exports.default = Component;
+
+_defineProperty(Component, "selector", 'component');
+
+},{"../mutation/mutation":213}],204:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
 var _locomotiveScroll = _interopRequireDefault(require("locomotive-scroll"));
 
 var _rxjs = require("rxjs");
@@ -17277,10 +17369,11 @@ function locomotiveScrollEvent$() {
     console.log('locomotiveScroll');
     locomotiveScroll.on('scroll', handler);
   }, handler => {// !!! locomotiveScroll.removeListener('scroll', handler);
-  }).pipe((0, _operators.map)(instance => {
+  }).pipe( // auditTime(1000 / 60),
+  (0, _operators.map)(instance => {
     // instance.direction, instance.speed
-    const progress = instance.scroll.y / instance.limit;
-    console.log('progress', progress);
+    // const progress = instance.scroll.y / instance.limit;
+    // console.log('progress', progress);
     event.speed = instance.speed;
     event.scrollTop = instance.scroll.y;
     event.direction = instance.direction;
@@ -17784,7 +17877,7 @@ class DomService extends Dom {
 
 exports.default = DomService;
 
-},{"../rect/rect":216,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],204:[function(require,module,exports){
+},{"../rect/rect":217,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],205:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18052,7 +18145,7 @@ const outBounce = Ease.Bounce.Out;
 var _default = Ease;
 exports.default = _default;
 
-},{}],205:[function(require,module,exports){
+},{}],206:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18168,7 +18261,7 @@ class Example01 {
 
 exports.default = Example01;
 
-},{"../colors/colors":202}],206:[function(require,module,exports){
+},{"../colors/colors":202}],207:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18309,7 +18402,7 @@ class Example01 {
 
 exports.default = Example01;
 
-},{"../colors/colors":202,"../texture/texture":219}],207:[function(require,module,exports){
+},{"../colors/colors":202,"../texture/texture":220}],208:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18374,7 +18467,7 @@ class Example03 {
 
 exports.default = Example03;
 
-},{"../colors/colors":202,"../ease/ease":204,"../model/model":211,"../title/title":221,"../world/world":222}],208:[function(require,module,exports){
+},{"../colors/colors":202,"../ease/ease":205,"../model/model":212,"../title/title":222,"../world/world":223}],209:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18444,7 +18537,7 @@ class Example04 {
 
 exports.default = Example04;
 
-},{"../picture/picture.shader":214,"../plane/plane":215,"../title/title":221,"../world/world":222}],209:[function(require,module,exports){
+},{"../picture/picture.shader":215,"../plane/plane":216,"../title/title":222,"../world/world":223}],210:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18469,8 +18562,10 @@ class Lights extends THREE.Group {
 
 exports.default = Lights;
 
-},{}],210:[function(require,module,exports){
+},{}],211:[function(require,module,exports){
 "use strict";
+
+var _component = _interopRequireDefault(require("./component/component"));
 
 var _example = _interopRequireDefault(require("./examples/example-01"));
 
@@ -18480,21 +18575,26 @@ var _example3 = _interopRequireDefault(require("./examples/example-03"));
 
 var _example4 = _interopRequireDefault(require("./examples/example-04"));
 
-var _mutation = _interopRequireDefault(require("./mutation/mutation"));
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /* jshint esversion: 6 */
-_mutation.default.observe$().subscribe(event => {
-  console.log(event.added.length, event.removed.length);
+
+/*
+import Mutation from './mutation/mutation';
+
+Mutation.observe$().subscribe((event) => {
+	console.log(event.added.length, event.removed.length);
+	console.log(event.added);
 });
+*/
+_component.default.init();
 
 window.Example01 = _example.default;
 window.Example02 = _example2.default;
 window.Example03 = _example3.default;
 window.Example04 = _example4.default;
 
-},{"./examples/example-01":205,"./examples/example-02":206,"./examples/example-03":207,"./examples/example-04":208,"./mutation/mutation":212}],211:[function(require,module,exports){
+},{"./component/component":203,"./examples/example-01":206,"./examples/example-02":207,"./examples/example-03":208,"./examples/example-04":209}],212:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18512,6 +18612,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 /* jshint esversion: 6 */
 const deg = THREE.Math.degToRad;
+const GEOMETRY = new THREE.BoxGeometry(1, 1, 1); // const GEOMETRY = new THREE.IcosahedronBufferGeometry(0.5, 1);
 
 class Model {
   constructor(node, options) {
@@ -18531,8 +18632,6 @@ class Model {
   }
 
   create(callback) {
-    // const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const geometry = new THREE.IcosahedronBufferGeometry(0.5, 1);
     const material = new THREE.MeshStandardMaterial({
       color: (0, _colors.randomColor)(),
       roughness: 0.4,
@@ -18541,7 +18640,7 @@ class Model {
       transparent: true,
       opacity: 0.9
     });
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(GEOMETRY, material);
     mesh.renderOrder = 3;
 
     if (typeof callback === 'function') {
@@ -18568,9 +18667,8 @@ class Model {
       this.scroll = event.scroll;
       this.intersection = event.intersection;
       this.calculateScaleAndPosition();
-    });
+    }); // console.log('Model.loaded', mesh);
 
-    console.log('Model.loaded', mesh);
   }
 
   calculateScaleAndPosition() {
@@ -18606,7 +18704,7 @@ class Model {
 
 exports.default = Model;
 
-},{"../colors/colors":202,"../dom/dom.service":203,"../ease/ease":204}],212:[function(require,module,exports){
+},{"../colors/colors":202,"../dom/dom.service":204,"../ease/ease":205}],213:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18717,7 +18815,7 @@ class Mutation {
     (0, _operators.shareReplay)());
   }
 
-  added$(attribute) {
+  static added$(attribute) {
     const added = [];
     return this.observe$().pipe((0, _operators.map)(event => {
       added.length = 0;
@@ -18727,10 +18825,12 @@ class Mutation {
           added[i] = event.added[i];
         }
       }
-    }), (0, _operators.filter)(added => added.length), (0, _operators.shareReplay)());
+
+      return added;
+    }), (0, _operators.startWith)([...document.querySelectorAll(`[${attribute}]`)]), (0, _operators.filter)(added => added.length), (0, _operators.shareReplay)());
   }
 
-  removed$(attribute) {
+  static removed$(attribute) {
     const removed = [];
     return this.observe$().pipe((0, _operators.map)(event => {
       removed.length = 0;
@@ -18740,6 +18840,8 @@ class Mutation {
           removed[i] = event.removed[i];
         }
       }
+
+      return removed;
     }), (0, _operators.filter)(removed => removed.length), (0, _operators.shareReplay)());
   }
 
@@ -18761,7 +18863,7 @@ class Mutation {
 
 exports.default = Mutation;
 
-},{"rxjs":2,"rxjs/operators":200}],213:[function(require,module,exports){
+},{"rxjs":2,"rxjs/operators":200}],214:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18840,9 +18942,8 @@ class Picture {
       this.scroll = event.scroll;
       this.intersection = event.intersection;
       this.calculateScaleAndPosition();
-    });
+    }); // console.log('Picture.loaded', mesh);
 
-    console.log('Picture.loaded', mesh);
   }
 
   calculateScaleAndPosition() {
@@ -18868,7 +18969,7 @@ class Picture {
 
 exports.default = Picture;
 
-},{"../dom/dom.service":203,"../plane/plane":215,"../texture/texture":219}],214:[function(require,module,exports){
+},{"../dom/dom.service":204,"../plane/plane":216,"../texture/texture":220}],215:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19021,7 +19122,7 @@ class PictureShader extends _picture.default {
 
 exports.default = PictureShader;
 
-},{"../plane/plane":215,"../texture/texture":219,"./picture":213}],215:[function(require,module,exports){
+},{"../plane/plane":216,"../texture/texture":220,"./picture":214}],216:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19126,7 +19227,7 @@ class Plane {
 
 exports.default = Plane;
 
-},{"../colors/colors":202,"../dom/dom.service":203}],216:[function(require,module,exports){
+},{"../colors/colors":202,"../dom/dom.service":204}],217:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19257,7 +19358,7 @@ class Rect {
 
 exports.default = Rect;
 
-},{}],217:[function(require,module,exports){
+},{}],218:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19290,7 +19391,7 @@ class Renderer extends THREE.WebGLRenderer {
 
 exports.default = Renderer;
 
-},{}],218:[function(require,module,exports){
+},{}],219:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19310,7 +19411,7 @@ class Scene extends THREE.Scene {
 
 exports.default = Scene;
 
-},{}],219:[function(require,module,exports){
+},{}],220:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19404,7 +19505,7 @@ class Texture {
 
 exports.default = Texture;
 
-},{"rxjs":2,"rxjs/operators":200}],220:[function(require,module,exports){
+},{"rxjs":2,"rxjs/operators":200}],221:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19458,7 +19559,7 @@ class Emittable {
 
 exports.default = Emittable;
 
-},{}],221:[function(require,module,exports){
+},{}],222:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19475,6 +19576,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 /* jshint esversion: 6 */
 class Title {
   constructor(node) {
+    return;
     this.node = node;
     const splitting = Splitting({
       target: node,
@@ -19517,7 +19619,7 @@ class Title {
 
 exports.default = Title;
 
-},{"../dom/dom.service":203,"../ease/ease":204}],222:[function(require,module,exports){
+},{"../dom/dom.service":204,"../ease/ease":205}],223:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19584,11 +19686,23 @@ class World extends _emittable.default {
       const time = performance.now();
       const tick = this.tick_ ? ++this.tick_ : this.tick_ = 1;
       const scene = this.scene;
-      scene.children.forEach(x => {
+
+      for (let i = 0; i < scene.children.length; i++) {
+        const x = scene.children[i];
+
         if (typeof x.userData.render === 'function') {
           x.userData.render(time, tick);
         }
+      }
+      /*
+      scene.children.forEach(x => {
+      	if (typeof x.userData.render === 'function') {
+      		x.userData.render(time, tick);
+      	}
       });
+      */
+
+
       const camera = this.camera;
       const renderer = this.renderer;
       renderer.render(scene, camera);
@@ -19634,5 +19748,5 @@ class World extends _emittable.default {
 
 exports.default = World;
 
-},{"../camera/camera":201,"../lights/lights":209,"../rect/rect":216,"../renderer/renderer":217,"../scene/scene":218,"../threejs/interactive/emittable":220}]},{},[210]);
+},{"../camera/camera":201,"../lights/lights":210,"../rect/rect":217,"../renderer/renderer":218,"../scene/scene":219,"../threejs/interactive/emittable":221}]},{},[211]);
 //# sourceMappingURL=main.js.map

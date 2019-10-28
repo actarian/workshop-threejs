@@ -6,6 +6,9 @@ import Ease from '../ease/ease';
 
 const deg = THREE.Math.degToRad;
 
+const GEOMETRY = new THREE.BoxGeometry(1, 1, 1);
+// const GEOMETRY = new THREE.IcosahedronBufferGeometry(0.5, 1);
+
 export default class Model {
 
 	constructor(node, options) {
@@ -23,8 +26,6 @@ export default class Model {
 	}
 
 	create(callback) {
-		// const geometry = new THREE.BoxGeometry(1, 1, 1);
-		const geometry = new THREE.IcosahedronBufferGeometry(0.5, 1);
 		const material = new THREE.MeshStandardMaterial({
 			color: randomColor(),
 			roughness: 0.4,
@@ -33,7 +34,7 @@ export default class Model {
 			transparent: true,
 			opacity: 0.9,
 		});
-		const mesh = new THREE.Mesh(geometry, material);
+		const mesh = new THREE.Mesh(GEOMETRY, material);
 		mesh.renderOrder = 3;
 		if (typeof callback === 'function') {
 			callback(mesh);
@@ -56,7 +57,7 @@ export default class Model {
 			this.intersection = event.intersection;
 			this.calculateScaleAndPosition();
 		});
-		console.log('Model.loaded', mesh);
+		// console.log('Model.loaded', mesh);
 	}
 
 	calculateScaleAndPosition() {

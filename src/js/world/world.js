@@ -50,11 +50,19 @@ export default class World extends Emittable {
 			const time = performance.now();
 			const tick = this.tick_ ? ++this.tick_ : this.tick_ = 1;
 			const scene = this.scene;
+			for (let i = 0; i < scene.children.length; i++) {
+				const x = scene.children[i];
+				if (typeof x.userData.render === 'function') {
+					x.userData.render(time, tick);
+				}
+			}
+			/*
 			scene.children.forEach(x => {
 				if (typeof x.userData.render === 'function') {
 					x.userData.render(time, tick);
 				}
 			});
+			*/
 			const camera = this.camera;
 			const renderer = this.renderer;
 			renderer.render(scene, camera);

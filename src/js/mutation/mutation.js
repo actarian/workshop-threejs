@@ -1,7 +1,7 @@
 /* jshint esversion: 6 */
 
 import { fromEventPattern } from 'rxjs';
-import { filter, map, shareReplay } from 'rxjs/operators';
+import { filter, map, shareReplay, startWith } from 'rxjs/operators';
 
 export default class Mutation {
 
@@ -98,7 +98,7 @@ export default class Mutation {
 		);
 	}
 
-	added$(attribute) {
+	static added$(attribute) {
 		const added = [];
 		return this.observe$().pipe(
 			map(event => {
@@ -108,13 +108,15 @@ export default class Mutation {
 						added[i] = event.added[i];
 					}
 				}
+				return added;
 			}),
+			startWith([...document.querySelectorAll(`[${attribute}]`)]),
 			filter(added => added.length),
 			shareReplay()
 		);
 	}
 
-	removed$(attribute) {
+	static removed$(attribute) {
 		const removed = [];
 		return this.observe$().pipe(
 			map(event => {
@@ -124,6 +126,7 @@ export default class Mutation {
 						removed[i] = event.removed[i];
 					}
 				}
+				return removed;
 			}),
 			filter(removed => removed.length),
 			shareReplay()

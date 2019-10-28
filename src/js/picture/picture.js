@@ -62,7 +62,7 @@ export default class Picture {
 			this.intersection = event.intersection;
 			this.calculateScaleAndPosition();
 		});
-		console.log('Picture.loaded', mesh);
+		// console.log('Picture.loaded', mesh);
 	}
 
 	calculateScaleAndPosition() {

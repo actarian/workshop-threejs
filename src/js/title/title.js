@@ -6,6 +6,7 @@ import Ease from '../ease/ease';
 export default class Title {
 
 	constructor(node) {
+		return;
 		this.node = node;
 		const splitting = Splitting({
 			target: node,
