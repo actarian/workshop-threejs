@@ -54,20 +54,22 @@ function locomotiveScrollEvent$() {
 		direction: 0,
 		originalEvent: null,
 	};
-	const locomotiveScroll = new LocomotiveScroll({
-		el: document.querySelector('#js-scroll'),
-		smooth: true,
-		getSpeed: true,
-		getDirection: true
-	});
 	return fromEventPattern((handler) => {
+		const locomotiveScroll = new LocomotiveScroll({
+			el: document.querySelector('#js-scroll'),
+			smooth: true,
+			getSpeed: true,
+			getDirection: true
+		});
+		console.log('locomotiveScroll');
 		locomotiveScroll.on('scroll', handler);
 	}, (handler) => {
 		// !!! locomotiveScroll.removeListener('scroll', handler);
 	}).pipe(
 		map((instance) => {
 			// instance.direction, instance.speed
-			// const progress = instance.scroll.y / instance.limit;
+			const progress = instance.scroll.y / instance.limit;
+			console.log('progress', progress);
 			event.speed = instance.speed;
 			event.scrollTop = instance.scroll.y;
 			event.direction = instance.direction;

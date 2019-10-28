@@ -17109,7 +17109,7 @@ class Camera extends THREE.PerspectiveCamera {
 
 exports.default = Camera;
 
-},{"../rect/rect":215}],202:[function(require,module,exports){
+},{"../rect/rect":216}],202:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17267,18 +17267,20 @@ function locomotiveScrollEvent$() {
     direction: 0,
     originalEvent: null
   };
-  const locomotiveScroll = new _locomotiveScroll.default({
-    el: document.querySelector('#js-scroll'),
-    smooth: true,
-    getSpeed: true,
-    getDirection: true
-  });
   return (0, _rxjs.fromEventPattern)(handler => {
+    const locomotiveScroll = new _locomotiveScroll.default({
+      el: document.querySelector('#js-scroll'),
+      smooth: true,
+      getSpeed: true,
+      getDirection: true
+    });
+    console.log('locomotiveScroll');
     locomotiveScroll.on('scroll', handler);
   }, handler => {// !!! locomotiveScroll.removeListener('scroll', handler);
   }).pipe((0, _operators.map)(instance => {
     // instance.direction, instance.speed
-    // const progress = instance.scroll.y / instance.limit;
+    const progress = instance.scroll.y / instance.limit;
+    console.log('progress', progress);
     event.speed = instance.speed;
     event.scrollTop = instance.scroll.y;
     event.direction = instance.direction;
@@ -17782,7 +17784,7 @@ class DomService extends Dom {
 
 exports.default = DomService;
 
-},{"../rect/rect":215,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],204:[function(require,module,exports){
+},{"../rect/rect":216,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],204:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18307,7 +18309,7 @@ class Example01 {
 
 exports.default = Example01;
 
-},{"../colors/colors":202,"../texture/texture":218}],207:[function(require,module,exports){
+},{"../colors/colors":202,"../texture/texture":219}],207:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18372,7 +18374,7 @@ class Example03 {
 
 exports.default = Example03;
 
-},{"../colors/colors":202,"../ease/ease":204,"../model/model":211,"../title/title":220,"../world/world":221}],208:[function(require,module,exports){
+},{"../colors/colors":202,"../ease/ease":204,"../model/model":211,"../title/title":221,"../world/world":222}],208:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18442,7 +18444,7 @@ class Example04 {
 
 exports.default = Example04;
 
-},{"../picture/picture.shader":213,"../plane/plane":214,"../title/title":220,"../world/world":221}],209:[function(require,module,exports){
+},{"../picture/picture.shader":214,"../plane/plane":215,"../title/title":221,"../world/world":222}],209:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18478,15 +18480,21 @@ var _example3 = _interopRequireDefault(require("./examples/example-03"));
 
 var _example4 = _interopRequireDefault(require("./examples/example-04"));
 
+var _mutation = _interopRequireDefault(require("./mutation/mutation"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /* jshint esversion: 6 */
+_mutation.default.observe$().subscribe(event => {
+  console.log(event.added.length, event.removed.length);
+});
+
 window.Example01 = _example.default;
 window.Example02 = _example2.default;
 window.Example03 = _example3.default;
 window.Example04 = _example4.default;
 
-},{"./examples/example-01":205,"./examples/example-02":206,"./examples/example-03":207,"./examples/example-04":208}],211:[function(require,module,exports){
+},{"./examples/example-01":205,"./examples/example-02":206,"./examples/example-03":207,"./examples/example-04":208,"./mutation/mutation":212}],211:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18606,6 +18614,161 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
+var _rxjs = require("rxjs");
+
+var _operators = require("rxjs/operators");
+
+/* jshint esversion: 6 */
+class Mutation {
+  static callback(records, observer) {
+    records.forEach(record => {
+      switch (record.type) {
+        case 'childList':
+          /* One or more children have been added to and/or removed
+          from the tree; see record.addedNodes and
+          record.removedNodes */
+          break;
+
+        case 'attributes':
+          /* An attribute value changed on the element in
+          record.target; the attribute name is in
+          record.attributeName and its previous value is in
+          record.oldValue */
+          break;
+      }
+
+      console.log(record);
+    });
+  }
+
+  static observe() {
+    const node = document.querySelector('body');
+    const options = {
+      childList: true,
+      attributes: false,
+      subtree: true //Omit or set to false to observe only changes to the parent node.
+
+    };
+    const observer = new MutationObserver(Mutation.callback);
+    observer.observe(node, options);
+  }
+
+  static observe$() {
+    let observer;
+    const added = [];
+    const removed = [];
+    const event = {
+      added,
+      removed
+    };
+    return (0, _rxjs.fromEventPattern)(handler => {
+      const node = document.querySelector('body');
+      const options = {
+        childList: true,
+        attributes: false,
+        subtree: true
+      };
+      observer = new MutationObserver(handler);
+      observer.observe(node, options);
+    }, handler => {
+      if (onserver) {
+        observer.disconnect();
+      }
+    }).pipe((0, _operators.map)(params => {
+      const records = params[0];
+      const observer = params[1];
+      added.length = 0;
+      removed.length = 0; // records: MutationRecord[]
+
+      records.forEach(record => {
+        for (let i = 0; i < record.addedNodes.length; i++) {
+          if (record.addedNodes[i].nodeType === 1) {
+            added[i] = record.addedNodes[i];
+          }
+        }
+
+        for (let i = 0; i < record.removedNodes.length; i++) {
+          if (record.removedNodes[i].nodeType === 1) {
+            removed[i] = record.removedNodes[i];
+          }
+        }
+        /*
+        switch (record.type) {
+        	case 'childList':
+        		// One or more children have been added to and/or removed from the tree;
+        		// see record.addedNodes and record.removedNodes
+        		if (this.nodeListCountElements(record.addedNodes) > 0) {
+        			console.log('added', record.addedNodes);
+        		}
+        		if (this.nodeListCountElements(record.removedNodes) > 0) {
+        			console.log('removed', record.removedNodes);
+        		}
+        		break;
+        	case 'attributes':
+        		// An attribute value changed on the element in record.target;
+        		// the attribute name is in record.attributeName and its previous value is in record.oldValue
+        		break;
+        }
+        */
+
+      });
+      return event;
+    }), (0, _operators.filter)(event => event.added.length || event.removed.length), // startWith(event),
+    (0, _operators.shareReplay)());
+  }
+
+  added$(attribute) {
+    const added = [];
+    return this.observe$().pipe((0, _operators.map)(event => {
+      added.length = 0;
+
+      for (let i = 0; i < event.added.length; i++) {
+        if (event.added[i].hasAttribute(attribute)) {
+          added[i] = event.added[i];
+        }
+      }
+    }), (0, _operators.filter)(added => added.length), (0, _operators.shareReplay)());
+  }
+
+  removed$(attribute) {
+    const removed = [];
+    return this.observe$().pipe((0, _operators.map)(event => {
+      removed.length = 0;
+
+      for (let i = 0; i < event.removed.length; i++) {
+        if (event.removed[i].hasAttribute(attribute)) {
+          removed[i] = event.removed[i];
+        }
+      }
+    }), (0, _operators.filter)(removed => removed.length), (0, _operators.shareReplay)());
+  }
+
+  static nodeListCountElements(list) {
+    let count = 0;
+
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i];
+
+      if (item.nodeType === 1) {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
+}
+
+exports.default = Mutation;
+
+},{"rxjs":2,"rxjs/operators":200}],213:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
 var _dom = _interopRequireDefault(require("../dom/dom.service"));
 
 var _plane = require("../plane/plane");
@@ -18705,7 +18868,7 @@ class Picture {
 
 exports.default = Picture;
 
-},{"../dom/dom.service":203,"../plane/plane":214,"../texture/texture":218}],213:[function(require,module,exports){
+},{"../dom/dom.service":203,"../plane/plane":215,"../texture/texture":219}],214:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18858,7 +19021,7 @@ class PictureShader extends _picture.default {
 
 exports.default = PictureShader;
 
-},{"../plane/plane":214,"../texture/texture":218,"./picture":212}],214:[function(require,module,exports){
+},{"../plane/plane":215,"../texture/texture":219,"./picture":213}],215:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18963,7 +19126,7 @@ class Plane {
 
 exports.default = Plane;
 
-},{"../colors/colors":202,"../dom/dom.service":203}],215:[function(require,module,exports){
+},{"../colors/colors":202,"../dom/dom.service":203}],216:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19036,8 +19199,7 @@ class Rect {
     this.height = h;
     this.right = this.left + this.width;
     this.bottom = this.top + this.height;
-    this.setCenter();
-    console.log(w, h);
+    this.setCenter(); // console.log(w, h);
   }
 
   setCenter() {
@@ -19095,7 +19257,7 @@ class Rect {
 
 exports.default = Rect;
 
-},{}],216:[function(require,module,exports){
+},{}],217:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19128,7 +19290,7 @@ class Renderer extends THREE.WebGLRenderer {
 
 exports.default = Renderer;
 
-},{}],217:[function(require,module,exports){
+},{}],218:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19148,7 +19310,7 @@ class Scene extends THREE.Scene {
 
 exports.default = Scene;
 
-},{}],218:[function(require,module,exports){
+},{}],219:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19242,7 +19404,7 @@ class Texture {
 
 exports.default = Texture;
 
-},{"rxjs":2,"rxjs/operators":200}],219:[function(require,module,exports){
+},{"rxjs":2,"rxjs/operators":200}],220:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19296,7 +19458,7 @@ class Emittable {
 
 exports.default = Emittable;
 
-},{}],220:[function(require,module,exports){
+},{}],221:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19355,7 +19517,7 @@ class Title {
 
 exports.default = Title;
 
-},{"../dom/dom.service":203,"../ease/ease":204}],221:[function(require,module,exports){
+},{"../dom/dom.service":203,"../ease/ease":204}],222:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19472,5 +19634,5 @@ class World extends _emittable.default {
 
 exports.default = World;
 
-},{"../camera/camera":201,"../lights/lights":209,"../rect/rect":215,"../renderer/renderer":216,"../scene/scene":217,"../threejs/interactive/emittable":219}]},{},[210]);
+},{"../camera/camera":201,"../lights/lights":209,"../rect/rect":216,"../renderer/renderer":217,"../scene/scene":218,"../threejs/interactive/emittable":220}]},{},[210]);
 //# sourceMappingURL=main.js.map

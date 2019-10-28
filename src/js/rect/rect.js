@@ -65,7 +65,7 @@ export default class Rect {
 		this.right = this.left + this.width;
 		this.bottom = this.top + this.height;
 		this.setCenter();
-		console.log(w, h);
+		// console.log(w, h);
 	}
 
 	setCenter() {
