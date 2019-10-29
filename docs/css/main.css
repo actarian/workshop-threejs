@@ -3016,6 +3016,12 @@ button,
 img {
   max-width: 100%; }
 
+[component] {
+  background: rgba(255, 0, 0, 0.1);
+  padding: 4px 10px;
+  margin-bottom: 1px;
+  font-size: 14px; }
+
 .example-01 .world {
   position: fixed;
   width: 100vw;

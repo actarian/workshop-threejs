@@ -4,17 +4,19 @@ import { merge, Subject } from 'rxjs';
 import { map, takeUntil, tap } from 'rxjs/operators';
 import Mutation from '../mutation/mutation';
 
-const store = {
-	instances: {},
-	inputs: {},
-	outputs: {},
-};
-
 const DEFAULT_META = {
 	attribute: 'component',
 	inputs: ['input'],
 	outputs: ['output'],
 };
+
+const STORE = {
+	INSTANCE: {},
+	INPUT: {},
+	OUTPUT: {},
+};
+
+let INDEX = 0;
 
 export default class Component {
 
@@ -26,9 +28,11 @@ export default class Component {
 		// this.node.innerHTML = 'Component';
 		// this.node.style.background = 'rgba(255,0,0,0.1)';
 		// console.log('Component.create', this.inputs_());
+		/*
 		setInterval(() => {
 			this.output.next({ message: this.key_ });
 		}, 1500);
+		*/
 	}
 
 	destroy() {
@@ -52,54 +56,68 @@ export default class Component {
 
 	static add_(node) {
 		const meta = this.meta || DEFAULT_META;
-		const index = Object.keys(store.instances).length;
+		const index = ++INDEX; // Object.keys(STORE.INSTANCE).length;
 		const key = `${meta.attribute}-${index}`;
-		node.setAttribute(`instance`, key);
 		const instance = new this(node);
 		instance.key_ = key;
 		instance.unsubscribe = new Subject();
+		if (meta.attribute.indexOf('*') === 0) {
+			this.update_(instance);
+			return instance;
+		}
+		node.setAttribute(`instance`, key);
 		const inputs = meta.inputs;
-		inputs.forEach(input => {
-			store.inputs[`${key}-${input}`] = this.make_input_(instance, input);
-		});
+		if (inputs) {
+			inputs.forEach(input => {
+				STORE.INPUT[`${key}-${input}`] = this.make_input_(instance, input);
+			});
+		}
 		instance.inputs_ = () => {
 			const inputs_ = {};
-			inputs.forEach(input => inputs_[input] = instance[input]);
+			if (inputs) {
+				inputs.forEach(input => inputs_[input] = instance[input]);
+			}
 			return inputs_;
 		};
 		const outputs = meta.outputs;
-		outputs.forEach(output => {
-			store.outputs[`${key}-${output}`] = this.make_output_(instance, output);
-			instance[output].pipe(
-				takeUntil(instance.unsubscribe)
-			).subscribe();
-		});
+		if (outputs) {
+			outputs.forEach(output => {
+				STORE.OUTPUT[`${key}-${output}`] = this.make_output_(instance, output);
+				instance[output].pipe(
+					takeUntil(instance.unsubscribe)
+				).subscribe();
+			});
+		}
 		this.update_(instance);
 		if (typeof instance.create === 'function') {
 			instance.create();
 		}
-		store.instances[key] = instance;
+		STORE.INSTANCE[key] = instance;
 		return instance;
 	}
 
 	static remove_(node) {
 		const meta = this.meta || DEFAULT_META;
 		const key = node.getAttribute(`instance`);
-		const instance = store.instances[key];
+		const instance = STORE.INSTANCE[key];
 		instance.unsubscribe.next();
 		instance.unsubscribe.complete();
 		if (typeof instance.destroy === 'function') {
 			instance.destroy();
 		}
-		delete store.instances[key];
+		delete STORE.INSTANCE[key];
 		const inputs = meta.inputs;
-		inputs.forEach(input => {
-			delete store.inputs[`${key}-${input}`];
-		});
+		if (inputs) {
+			inputs.forEach(input => {
+				delete STORE.INPUT[`${key}-${input}`];
+			});
+		}
 		const outputs = meta.outputs;
-		outputs.forEach(output => {
-			delete store.outputs[`${key}-${output}`];
-		});
+		if (outputs) {
+			outputs.forEach(output => {
+				delete STORE.OUTPUT[`${key}-${output}`];
+			});
+		}
 		return node;
 	}
 
@@ -107,17 +125,21 @@ export default class Component {
 		const key = instance.node.getAttribute(`instance`);
 		const meta = this.meta || DEFAULT_META;
 		const inputs = meta.inputs;
-		inputs.forEach(input => {
-			const value = this.call_input_(instance, store.inputs[`${key}-${input}`]);
-			instance[input] = value;
-		});
+		if (inputs) {
+			inputs.forEach(input => {
+				const value = this.call_input_(instance, STORE.INPUT[`${key}-${input}`]);
+				instance[input] = value;
+			});
+		}
 		this.parse_(instance.node, instance);
 		/*
 		const outputs = meta.outputs;
-		outputs.forEach(output => {
-			const value = this.call_output_(instance, store.outputs[`${key}-${output}`]);
-			console.log(`setted -> ${output}`, value);
-		});
+		if (outputs) {
+			outputs.forEach(output => {
+				const value = this.call_output_(instance, STORE.OUTPUT[`${key}-${output}`]);
+				console.log(`setted -> ${output}`, value);
+			});
+		}
 		*/
 	}
 
@@ -130,9 +152,15 @@ export default class Component {
 				return (${source}).apply(this, arguments);
 			}`).call(instance);
 		};
-		const bind = node.getAttribute('bind');
-		if (bind !== null) {
-			node.innerHTML = bind.replace(new RegExp('\{\{(?:\\s+)?(.*)(?:\\s+)?\}\}'), parse_eval_);
+		const parse_replace_ = function(text) {
+			return text.replace(new RegExp('\{\{(?:\\s+)?(.*)(?:\\s+)?\}\}'), parse_eval_);
+		}
+		if (node.hasAttribute('[bind]')) {
+			const bind = `{{${node.getAttribute('[bind]')}}}`;
+			node.innerHTML = parse_replace_(bind);
+		} else if (node.hasAttribute('bind')) {
+			const bind = node.getAttribute('bind');
+			node.innerHTML = parse_replace_(bind);
 		} else {
 			for (let i = 0; i < node.childNodes.length; i++) {
 				const child = node.childNodes[i];
@@ -144,7 +172,7 @@ export default class Component {
 				} else if (child.nodeType === 3) {
 					// console.log(child);
 					const text = child.nodeValue;
-					const replacedText = text.replace(new RegExp('\{\{(?:\\s+)?(.*)(?:\\s+)?\}\}'), parse_eval_);
+					const replacedText = parse_replace_(text);
 					if (text !== replacedText) {
 						node.setAttribute('bind', text);
 						const textNode = document.createTextNode(replacedText);
@@ -195,7 +223,7 @@ export default class Component {
 		}
 		const key = node.getAttribute(`instance`);
 		if (key !== undefined) {
-			const instance = store.instances[key];
+			const instance = STORE.INSTANCE[key];
 			return instance;
 		} else if (node.parentNode) {
 			return this.parent_(node.parentNode);
@@ -242,7 +270,6 @@ export default class Component {
 			throw new Error("Find statement does not match regular expression: /[a-zA-Z\_]+/");
 		}
 	}
-
 	*/
 
 }

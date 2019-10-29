@@ -68,6 +68,18 @@ export default class Mutation {
 		);
 	}
 
+	static queryAll(nodelist, attribute, results) {
+		for (let i = 0; i < nodelist.length; i++) {
+			if (nodelist[i].nodeType === 1) {
+				if (nodelist[i].hasAttribute(attribute)) {
+					results.push(nodelist[i]);
+				}
+				results = this.queryAll(nodelist[i].childNodes, attribute, results);
+			}
+		}
+		return results;
+	}
+
 	static added$(attribute) {
 		const added = [];
 		return this.observe$().pipe(
@@ -80,7 +92,8 @@ export default class Mutation {
 				}
 				return added;
 			}),
-			startWith([...document.querySelectorAll(`[${attribute}]`)]),
+			// startWith([...document.querySelectorAll(`[${attribute}]`)]),
+			startWith(this.queryAll(document.childNodes, attribute, [])),
 			filter(added => added.length),
 			shareReplay()
 		);

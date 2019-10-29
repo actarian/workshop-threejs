@@ -1,6 +1,7 @@
 /* jshint esversion: 6 */
 
 import Component from './component/component';
+import IfComponent from './component/if.component';
 import Example01 from './examples/example-01';
 import Example02 from './examples/example-02';
 import Example03 from './examples/example-03';
@@ -15,13 +16,19 @@ Mutation.observe$().subscribe((event) => {
 });
 */
 
-window.model = { message: 'works!' };
+window.model = {
+	value: 'yo!'
+};
 
 window.onOutput = ($event) => {
 	console.log('window.onOutput', $event);
 };
 
 Component.watch$().subscribe(createdComponentsOrDestroyedNodes => {
+	console.log('createdComponentsOrDestroyedNodes', createdComponentsOrDestroyedNodes);
+});
+
+IfComponent.watch$().subscribe(createdComponentsOrDestroyedNodes => {
 	console.log('createdComponentsOrDestroyedNodes', createdComponentsOrDestroyedNodes);
 });
 

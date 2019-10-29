@@ -15,8 +15,13 @@
 
 <body>
 	<div class="o-scroll" id="js-scroll">
-		<div component [input]="model" (output)="onOutput($event)" bind="{{input.message}}"></div>
-		<div component [input]="model" (output)="onOutput($event)">{{input.message}}</div>
+		<div component [input]="model" (output)="onOutput($event)">{{input.value}}</div>
+		<div component [input]="model" (output)="onOutput($event)" bind="{{input.value}}"></div>
+		<div component [input]="model" (output)="onOutput($event)" [bind]="input.value"></div>
+		<div *if="model.value">
+			<div component [bind]="model.value"></div>
+		</div>
+		<!-- <div *for="let item in items">{{item}}</div> -->
 		<div class="section--index">
 			<ul class="menu--nav">
 				<li><a href="./example-01.html">Example 01</a></li>

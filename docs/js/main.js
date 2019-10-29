@@ -17109,7 +17109,7 @@ class Camera extends THREE.PerspectiveCamera {
 
 exports.default = Camera;
 
-},{"../rect/rect":217}],202:[function(require,module,exports){
+},{"../rect/rect":218}],202:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17216,31 +17216,32 @@ var _mutation = _interopRequireDefault(require("../mutation/mutation"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /* jshint esversion: 6 */
-const store = {
-  instances: {},
-  inputs: {},
-  outputs: {}
-};
 const DEFAULT_META = {
   attribute: 'component',
   inputs: ['input'],
   outputs: ['output']
 };
+const STORE = {
+  INSTANCE: {},
+  INPUT: {},
+  OUTPUT: {}
+};
+let INDEX = 0;
 
 class Component {
   constructor(node) {
     this.node = node;
   }
 
-  create() {
-    // this.node.innerHTML = 'Component';
+  create() {// this.node.innerHTML = 'Component';
     // this.node.style.background = 'rgba(255,0,0,0.1)';
     // console.log('Component.create', this.inputs_());
+
+    /*
     setInterval(() => {
-      this.output.next({
-        message: this.key_
-      });
+    	this.output.next({ message: this.key_ });
     }, 1500);
+    */
   }
 
   destroy() {// console.log('Component.destroy');
@@ -17257,42 +17258,60 @@ class Component {
 
   static add_(node) {
     const meta = this.meta || DEFAULT_META;
-    const index = Object.keys(store.instances).length;
+    const index = ++INDEX; // Object.keys(STORE.INSTANCE).length;
+
     const key = `${meta.attribute}-${index}`;
-    node.setAttribute(`instance`, key);
     const instance = new this(node);
     instance.key_ = key;
     instance.unsubscribe = new _rxjs.Subject();
+
+    if (meta.attribute.indexOf('*') === 0) {
+      this.update_(instance);
+      return instance;
+    }
+
+    node.setAttribute(`instance`, key);
     const inputs = meta.inputs;
-    inputs.forEach(input => {
-      store.inputs[`${key}-${input}`] = this.make_input_(instance, input);
-    });
+
+    if (inputs) {
+      inputs.forEach(input => {
+        STORE.INPUT[`${key}-${input}`] = this.make_input_(instance, input);
+      });
+    }
 
     instance.inputs_ = () => {
       const inputs_ = {};
-      inputs.forEach(input => inputs_[input] = instance[input]);
+
+      if (inputs) {
+        inputs.forEach(input => inputs_[input] = instance[input]);
+      }
+
       return inputs_;
     };
 
     const outputs = meta.outputs;
-    outputs.forEach(output => {
-      store.outputs[`${key}-${output}`] = this.make_output_(instance, output);
-      instance[output].pipe((0, _operators.takeUntil)(instance.unsubscribe)).subscribe();
-    });
+
+    if (outputs) {
+      outputs.forEach(output => {
+        STORE.OUTPUT[`${key}-${output}`] = this.make_output_(instance, output);
+        instance[output].pipe((0, _operators.takeUntil)(instance.unsubscribe)).subscribe();
+      });
+    }
+
     this.update_(instance);
 
     if (typeof instance.create === 'function') {
       instance.create();
     }
 
-    store.instances[key] = instance;
+    STORE.INSTANCE[key] = instance;
     return instance;
   }
 
   static remove_(node) {
     const meta = this.meta || DEFAULT_META;
     const key = node.getAttribute(`instance`);
-    const instance = store.instances[key];
+    const instance = STORE.INSTANCE[key];
     instance.unsubscribe.next();
     instance.unsubscribe.complete();
 
@@ -17300,15 +17319,23 @@ class Component {
       instance.destroy();
     }
 
-    delete store.instances[key];
+    delete STORE.INSTANCE[key];
     const inputs = meta.inputs;
-    inputs.forEach(input => {
-      delete store.inputs[`${key}-${input}`];
-    });
+
+    if (inputs) {
+      inputs.forEach(input => {
+        delete STORE.INPUT[`${key}-${input}`];
+      });
+    }
+
     const outputs = meta.outputs;
-    outputs.forEach(output => {
-      delete store.outputs[`${key}-${output}`];
-    });
+
+    if (outputs) {
+      outputs.forEach(output => {
+        delete STORE.OUTPUT[`${key}-${output}`];
+      });
+    }
+
     return node;
   }
 
@@ -17316,17 +17343,23 @@ class Component {
     const key = instance.node.getAttribute(`instance`);
     const meta = this.meta || DEFAULT_META;
     const inputs = meta.inputs;
-    inputs.forEach(input => {
-      const value = this.call_input_(instance, store.inputs[`${key}-${input}`]);
-      instance[input] = value;
-    });
+
+    if (inputs) {
+      inputs.forEach(input => {
+        const value = this.call_input_(instance, STORE.INPUT[`${key}-${input}`]);
+        instance[input] = value;
+      });
+    }
+
     this.parse_(instance.node, instance);
     /*
     const outputs = meta.outputs;
-    outputs.forEach(output => {
-    	const value = this.call_output_(instance, store.outputs[`${key}-${output}`]);
-    	console.log(`setted -> ${output}`, value);
-    });
+    if (outputs) {
+    	outputs.forEach(output => {
+    		const value = this.call_output_(instance, STORE.OUTPUT[`${key}-${output}`]);
+    		console.log(`setted -> ${output}`, value);
+    	});
+    }
     */
   }
 
@@ -17340,10 +17373,16 @@ class Component {
 			}`).call(instance);
     };
 
-    const bind = node.getAttribute('bind');
+    const parse_replace_ = function (text) {
+      return text.replace(new RegExp('\{\{(?:\\s+)?(.*)(?:\\s+)?\}\}'), parse_eval_);
+    };
 
-    if (bind !== null) {
-      node.innerHTML = bind.replace(new RegExp('\{\{(?:\\s+)?(.*)(?:\\s+)?\}\}'), parse_eval_);
+    if (node.hasAttribute('[bind]')) {
+      const bind = `{{${node.getAttribute('[bind]')}}}`;
+      node.innerHTML = parse_replace_(bind);
+    } else if (node.hasAttribute('bind')) {
+      const bind = node.getAttribute('bind');
+      node.innerHTML = parse_replace_(bind);
     } else {
       for (let i = 0; i < node.childNodes.length; i++) {
         const child = node.childNodes[i]; // console.log('node', child, child.nodeType);
@@ -17355,7 +17394,7 @@ class Component {
         } else if (child.nodeType === 3) {
           // console.log(child);
           const text = child.nodeValue;
-          const replacedText = text.replace(new RegExp('\{\{(?:\\s+)?(.*)(?:\\s+)?\}\}'), parse_eval_);
+          const replacedText = parse_replace_(text);
 
           if (text !== replacedText) {
             node.setAttribute('bind', text);
@@ -17409,7 +17448,7 @@ class Component {
     const key = node.getAttribute(`instance`);
 
     if (key !== undefined) {
-      const instance = store.instances[key];
+      const instance = STORE.INSTANCE[key];
       return instance;
     } else if (node.parentNode) {
       return this.parent_(node.parentNode);
@@ -17450,14 +17489,81 @@ class Component {
   		throw new Error("Find statement does not match regular expression: /[a-zA-Z\_]+/");
   	}
   }
-  	*/
+  */
 
 
 }
 
 exports.default = Component;
 
-},{"../mutation/mutation":213,"rxjs":2,"rxjs/operators":200}],204:[function(require,module,exports){
+},{"../mutation/mutation":214,"rxjs":2,"rxjs/operators":200}],204:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _component = _interopRequireDefault(require("./component"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/* jshint esversion: 6 */
+class IfComponent extends _component.default {
+  constructor(node) {
+    super(node);
+    const if_ = this.node.getAttribute('*if');
+    const source = `($instance) => { return ${if_} }`;
+    const ifFunction = new Function(`with(this) {
+			return (${source}).apply(this, arguments);
+		}`);
+    this.ifFunction = ifFunction; // console.log('if_', if_);
+
+    this.node.removeAttribute('*if');
+  }
+
+  static add_if_(instance) {
+    if (!instance.node.parentNode) {
+      instance.ifnode.parentNode.insertBefore(instance.node, instance.ifnode.nextSibling);
+    }
+  }
+
+  static remove_if_(instance) {
+    if (instance.node.parentNode) {
+      instance.node.parentNode.removeChild(instance.node);
+    }
+  }
+
+  static update_(instance) {
+    const key = instance.node.getAttribute(`instance`); // console.log('update_', key);
+
+    if (!instance.ifnode) {
+      instance.ifnode = document.createComment(`*if: ${instance.key_}`);
+      instance.node.parentNode.replaceChild(instance.ifnode, instance.node);
+    }
+
+    const parent = this.parent_(instance.ifnode.parentNode);
+    const value = instance.ifFunction.call(parent, instance); // console.log(value);
+
+    if (value) {
+      this.add_if_(instance);
+    } else {
+      this.remove_if_(instance);
+    }
+  }
+
+  create() {}
+
+  destroy() {}
+
+}
+
+exports.default = IfComponent;
+IfComponent.meta = {
+  attribute: '*if'
+};
+
+},{"./component":203}],205:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18043,7 +18149,7 @@ class DomService extends Dom {
 
 exports.default = DomService;
 
-},{"../rect/rect":217,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],205:[function(require,module,exports){
+},{"../rect/rect":218,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],206:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18311,7 +18417,7 @@ const outBounce = Ease.Bounce.Out;
 var _default = Ease;
 exports.default = _default;
 
-},{}],206:[function(require,module,exports){
+},{}],207:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18427,7 +18533,7 @@ class Example01 {
 
 exports.default = Example01;
 
-},{"../colors/colors":202}],207:[function(require,module,exports){
+},{"../colors/colors":202}],208:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18568,7 +18674,7 @@ class Example01 {
 
 exports.default = Example01;
 
-},{"../colors/colors":202,"../texture/texture":220}],208:[function(require,module,exports){
+},{"../colors/colors":202,"../texture/texture":221}],209:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18633,7 +18739,7 @@ class Example03 {
 
 exports.default = Example03;
 
-},{"../colors/colors":202,"../ease/ease":205,"../model/model":212,"../title/title":222,"../world/world":223}],209:[function(require,module,exports){
+},{"../colors/colors":202,"../ease/ease":206,"../model/model":213,"../title/title":223,"../world/world":224}],210:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18703,7 +18809,7 @@ class Example04 {
 
 exports.default = Example04;
 
-},{"../picture/picture.shader":215,"../plane/plane":216,"../title/title":222,"../world/world":223}],210:[function(require,module,exports){
+},{"../picture/picture.shader":216,"../plane/plane":217,"../title/title":223,"../world/world":224}],211:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18728,10 +18834,12 @@ class Lights extends THREE.Group {
 
 exports.default = Lights;
 
-},{}],211:[function(require,module,exports){
+},{}],212:[function(require,module,exports){
 "use strict";
 
 var _component = _interopRequireDefault(require("./component/component"));
+
+var _if = _interopRequireDefault(require("./component/if.component"));
 
 var _example = _interopRequireDefault(require("./examples/example-01"));
 
@@ -18754,7 +18862,7 @@ Mutation.observe$().subscribe((event) => {
 });
 */
 window.model = {
-  message: 'works!'
+  value: 'yo!'
 };
 
 window.onOutput = $event => {
@@ -18765,12 +18873,16 @@ _component.default.watch$().subscribe(createdComponentsOrDestroyedNodes => {
   console.log('createdComponentsOrDestroyedNodes', createdComponentsOrDestroyedNodes);
 });
 
+_if.default.watch$().subscribe(createdComponentsOrDestroyedNodes => {
+  console.log('createdComponentsOrDestroyedNodes', createdComponentsOrDestroyedNodes);
+});
+
 window.Example01 = _example.default;
 window.Example02 = _example2.default;
 window.Example03 = _example3.default;
 window.Example04 = _example4.default;
 
-},{"./component/component":203,"./examples/example-01":206,"./examples/example-02":207,"./examples/example-03":208,"./examples/example-04":209}],212:[function(require,module,exports){
+},{"./component/component":203,"./component/if.component":204,"./examples/example-01":207,"./examples/example-02":208,"./examples/example-03":209,"./examples/example-04":210}],213:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18880,7 +18992,7 @@ class Model {
 
 exports.default = Model;
 
-},{"../colors/colors":202,"../dom/dom.service":204,"../ease/ease":205}],213:[function(require,module,exports){
+},{"../colors/colors":202,"../dom/dom.service":205,"../ease/ease":206}],214:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18958,6 +19070,20 @@ class Mutation {
     (0, _operators.shareReplay)());
   }
 
+  static queryAll(nodelist, attribute, results) {
+    for (let i = 0; i < nodelist.length; i++) {
+      if (nodelist[i].nodeType === 1) {
+        if (nodelist[i].hasAttribute(attribute)) {
+          results.push(nodelist[i]);
+        }
+
+        results = this.queryAll(nodelist[i].childNodes, attribute, results);
+      }
+    }
+
+    return results;
+  }
+
   static added$(attribute) {
     const added = [];
     return this.observe$().pipe((0, _operators.map)(event => {
@@ -18970,7 +19096,8 @@ class Mutation {
       }
 
       return added;
-    }), (0, _operators.startWith)([...document.querySelectorAll(`[${attribute}]`)]), (0, _operators.filter)(added => added.length), (0, _operators.shareReplay)());
+    }), // startWith([...document.querySelectorAll(`[${attribute}]`)]),
+    (0, _operators.startWith)(this.queryAll(document.childNodes, attribute, [])), (0, _operators.filter)(added => added.length), (0, _operators.shareReplay)());
   }
 
   static removed$(attribute) {
@@ -19030,7 +19157,7 @@ class Mutation {
 
 exports.default = Mutation;
 
-},{"rxjs":2,"rxjs/operators":200}],214:[function(require,module,exports){
+},{"rxjs":2,"rxjs/operators":200}],215:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19136,7 +19263,7 @@ class Picture {
 
 exports.default = Picture;
 
-},{"../dom/dom.service":204,"../plane/plane":216,"../texture/texture":220}],215:[function(require,module,exports){
+},{"../dom/dom.service":205,"../plane/plane":217,"../texture/texture":221}],216:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19289,7 +19416,7 @@ class PictureShader extends _picture.default {
 
 exports.default = PictureShader;
 
-},{"../plane/plane":216,"../texture/texture":220,"./picture":214}],216:[function(require,module,exports){
+},{"../plane/plane":217,"../texture/texture":221,"./picture":215}],217:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19394,7 +19521,7 @@ class Plane {
 
 exports.default = Plane;
 
-},{"../colors/colors":202,"../dom/dom.service":204}],217:[function(require,module,exports){
+},{"../colors/colors":202,"../dom/dom.service":205}],218:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19525,7 +19652,7 @@ class Rect {
 
 exports.default = Rect;
 
-},{}],218:[function(require,module,exports){
+},{}],219:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19558,7 +19685,7 @@ class Renderer extends THREE.WebGLRenderer {
 
 exports.default = Renderer;
 
-},{}],219:[function(require,module,exports){
+},{}],220:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19578,7 +19705,7 @@ class Scene extends THREE.Scene {
 
 exports.default = Scene;
 
-},{}],220:[function(require,module,exports){
+},{}],221:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19672,7 +19799,7 @@ class Texture {
 
 exports.default = Texture;
 
-},{"rxjs":2,"rxjs/operators":200}],221:[function(require,module,exports){
+},{"rxjs":2,"rxjs/operators":200}],222:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19726,7 +19853,7 @@ class Emittable {
 
 exports.default = Emittable;
 
-},{}],222:[function(require,module,exports){
+},{}],223:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19786,7 +19913,7 @@ class Title {
 
 exports.default = Title;
 
-},{"../dom/dom.service":204,"../ease/ease":205}],223:[function(require,module,exports){
+},{"../dom/dom.service":205,"../ease/ease":206}],224:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19915,5 +20042,5 @@ class World extends _emittable.default {
 
 exports.default = World;
 
-},{"../camera/camera":201,"../lights/lights":210,"../rect/rect":217,"../renderer/renderer":218,"../scene/scene":219,"../threejs/interactive/emittable":221}]},{},[211]);
+},{"../camera/camera":201,"../lights/lights":211,"../rect/rect":218,"../renderer/renderer":219,"../scene/scene":220,"../threejs/interactive/emittable":222}]},{},[212]);
 //# sourceMappingURL=main.js.map
