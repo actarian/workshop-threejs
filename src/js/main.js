@@ -22,7 +22,7 @@ window.onOutput = ($event) => {
 };
 
 Component.watch$().subscribe(createdComponentsOrDestroyedNodes => {
-	console.log(createdComponentsOrDestroyedNodes);
+	console.log('createdComponentsOrDestroyedNodes', createdComponentsOrDestroyedNodes);
 });
 
 window.Example01 = Example01;

@@ -5,36 +5,6 @@ import { filter, map, shareReplay, startWith } from 'rxjs/operators';
 
 export default class Mutation {
 
-	static callback(records, observer) {
-		records.forEach((record) => {
-			switch (record.type) {
-				case 'childList':
-					/* One or more children have been added to and/or removed
-				 from the tree; see record.addedNodes and
-				 record.removedNodes */
-					break;
-				case 'attributes':
-					/* An attribute value changed on the element in
-				 record.target; the attribute name is in
-				 record.attributeName and its previous value is in
-				 record.oldValue */
-					break;
-			}
-			console.log(record);
-		});
-	}
-
-	static observe() {
-		const node = document.querySelector('body');
-		const options = {
-			childList: true,
-			attributes: false,
-			subtree: true //Omit or set to false to observe only changes to the parent node.
-		};
-		const observer = new MutationObserver(Mutation.callback);
-		observer.observe(node, options);
-	}
-
 	static observe$() {
 		let observer;
 		const added = [];
@@ -133,6 +103,7 @@ export default class Mutation {
 		);
 	}
 
+	/*
 	static nodeListCountElements(list) {
 		let count = 0;
 		for (let i = 0; i < list.length; i++) {
@@ -143,5 +114,33 @@ export default class Mutation {
 		}
 		return count;
 	}
+
+	static callback(records, observer) {
+		records.forEach((record) => {
+			switch (record.type) {
+				case 'childList':
+					// One or more children have been added to and/or removed from the tree;
+					// see record.addedNodes and record.removedNodes
+				break;
+				case 'attributes':
+					// An attribute value changed on the element in record.target;
+					// the attribute name is in record.attributeName and its previous value is in record.oldValue
+				break;
+				}
+				console.log(record);
+		});
+	}
+
+	static observe() {
+		const node = document.querySelector('body');
+		const options = {
+			childList: true,
+			attributes: false,
+			subtree: true //Omit or set to false to observe only changes to the parent node.
+		};
+		const observer = new MutationObserver(Mutation.callback);
+		observer.observe(node, options);
+	}
+	*/
 
 }
