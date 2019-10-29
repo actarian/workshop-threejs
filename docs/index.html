@@ -15,8 +15,9 @@
 
 <body>
 	<div class="o-scroll" id="js-scroll">
+		<div component [input]="model" (output)="onOutput($event)" bind="{{input.message}}"></div>
+		<div component [input]="model" (output)="onOutput($event)">{{input.message}}</div>
 		<div class="section--index">
-			<div component [input]="1" (output)="console.log($event)"></div>
 			<ul class="menu--nav">
 				<li><a href="./example-01.html">Example 01</a></li>
 				<li><a href="./example-02.html">Example 02</a></li>
