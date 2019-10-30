@@ -83,39 +83,40 @@ export default class PictureShader extends Picture {
 	getMaterial(textures) {
 		const vertexShader = this.vertexShader;
 		const fragmentShader = this.fragmentShader;
+		const uniforms = this.uniforms = {
+			uImage: {
+				type: 't',
+				value: textures[0],
+			},
+			uNoise: {
+				type: 't',
+				value: textures[1],
+			},
+			uOpacity: {
+				type: 'f',
+				value: 1
+			},
+			uTime: {
+				type: 'f',
+				value: performance.now()
+			},
+			uSpeed: {
+				type: 'f',
+				value: 0
+			},
+			uPow: {
+				type: 'f',
+				value: 0
+			},
+			uResolution: {
+				type: 'v2',
+				value: new THREE.Vector2(window.innerWidth, window.innerHeight).multiplyScalar(window.devicePixelRatio)
+			},
+		};
 		const material = new THREE.ShaderMaterial({
+			uniforms: uniforms,
 			vertexShader: vertexShader,
 			fragmentShader: fragmentShader,
-			uniforms: {
-				uImage: {
-					type: 't',
-					value: textures[0],
-				},
-				uNoise: {
-					type: 't',
-					value: textures[1],
-				},
-				uOpacity: {
-					type: 'f',
-					value: 1
-				},
-				uTime: {
-					type: 'f',
-					value: performance.now()
-				},
-				uSpeed: {
-					type: 'f',
-					value: 0
-				},
-				uPow: {
-					type: 'f',
-					value: 0
-				},
-				uResolution: {
-					type: 'v2',
-					value: new THREE.Vector2(window.innerWidth, window.innerHeight).multiplyScalar(window.devicePixelRatio)
-				},
-			},
 			transparent: true,
 			side: THREE.DoubleSide
 		});
@@ -125,10 +126,11 @@ export default class PictureShader extends Picture {
 	update(instance, time, tick) {
 		const mesh = instance.mesh;
 		const pow = instance.intersection.offset();
-		mesh.material.uniforms.uTime.value = time;
-		mesh.material.uniforms.uOpacity.value = 1;
-		mesh.material.uniforms.uSpeed.value = instance.speed;
-		mesh.material.uniforms.uPow.value = pow;
+		const uniforms = this.uniforms;
+		uniforms.uTime.value = time;
+		uniforms.uOpacity.value = 1;
+		uniforms.uSpeed.value = instance.speed;
+		uniforms.uPow.value = pow;
 	}
 
 }
