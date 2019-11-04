@@ -17109,7 +17109,7 @@ class Camera extends THREE.PerspectiveCamera {
 
 exports.default = Camera;
 
-},{"../rect/rect":215}],202:[function(require,module,exports){
+},{"../rect/rect":216}],202:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17785,7 +17785,7 @@ class DomService extends Dom {
 
 exports.default = DomService;
 
-},{"../rect/rect":215,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],204:[function(require,module,exports){
+},{"../rect/rect":216,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],204:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18063,6 +18063,10 @@ exports.default = void 0;
 
 var _colors = require("../colors/colors");
 
+var _helper = _interopRequireDefault(require("../helper/helper"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 /* jshint esversion: 6 */
 class Example01 {
   constructor(container) {
@@ -18077,17 +18081,7 @@ class Example01 {
     camera.target = new THREE.Vector3();
     camera.zoom = 1;
     camera.updateProjectionMatrix();
-    scene.add(camera); // LIGHT
-
-    const light = new THREE.PointLight((0, _colors.randomColor)(), 1.0);
-    light.position.set(0, 10, 5);
-    /*
-    light.userData.render = (time, tick) => {
-    	light.position.y = Math.cos(tick * Math.PI / 180) * 10;
-    };
-    */
-
-    scene.add(light); // RENDERER
+    scene.add(camera); // RENDERER
 
     const renderer = this.renderer = new THREE.WebGLRenderer({
       antialias: true // alpha: true,
@@ -18097,14 +18091,92 @@ class Example01 {
     });
     renderer.setClearColor((0, _colors.randomColor)(), 1);
     renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer.domElement); // MODEL
+    container.appendChild(renderer.domElement); // LISTENERS
 
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    this.addListeners(); // ANIMATION LOOP
+
+    this.animate(); // LIGHT
+    // const light = new THREE.AmbientLight(randomColor(), 1);
+    // const light = new THREE.DirectionalLight(randomColor(), 1);
+    // const light = new THREE.HemisphereLight(randomColor(), randomColor(), 1);
+
+    const light = new THREE.PointLight((0, _colors.randomColor)(), 1); // const light = new THREE.RectAreaLight(randomColor(), 1, 2, 2);
+    // const light = new THREE.SpotLight(randomColor(), 1, 0.01, Math.PI / 2, 0, 1);
+
+    light.position.set(1, 1, 1);
+
+    if (light instanceof THREE.DirectionalLight || light instanceof THREE.RectAreaLight) {
+      light.lookAt(0, 0, 0);
+    }
+
+    scene.add(light);
+
+    const helper = _helper.default.make(light);
+    /*
+    if (helper) {
+    	scene.add(helper);
+    }
+    */
+
+    /*
+    light.userData.render = (time, tick) => {
+    	light.position.x = Math.cos(tick * Math.PI / 180) * 10;
+    	if (light instanceof THREE.DirectionalLight ||
+    		light instanceof THREE.RectAreaLight) {
+    		light.lookAt(0, 0, 0);
+    	}
+    	if (helper) {
+    		helper.update();
+    	}
+    };
+    */
+    // MATERIAL
+
+    /*
+    const material = new THREE.MeshBasicMaterial({
+    	color: randomColor(),
+    	wireframe: true
+    });
+    */
+
+    /*
+    const material = new THREE.MeshPhongMaterial({
+    	color: randomColor(),
+    	wireframe: false,
+    	flatShading: false,
+    });
+    */
+
+
     const material = new THREE.MeshStandardMaterial({
       color: (0, _colors.randomColor)(),
-      roughness: 0.4,
-      metalness: 0.01
+      roughness: 0.01,
+      metalness: 0.4
     });
+    /*
+    const material = new THREE.MeshMatcapMaterial({
+    	color: randomColor(),
+    	matcap: new THREE.TextureLoader().load(`./three/matcap/matcap-02.jpg`, (texture) => {
+    		console.log('texture loaded!', texture)
+    	})
+    });
+    */
+    // MODEL
+
+    const geometry = new THREE.BoxGeometry(1, 1, 1); // BoxGeometry(width : Float, height : Float, depth : Float, widthSegments : Integer, heightSegments : Integer, depthSegments : Integer)
+    // const geometry = new THREE.CircleGeometry(0.3, 4, 0, 2 * Math.PI); // CircleGeometry(radius : Float, segments : Integer, thetaStart : Float, thetaLength : Float);
+    // const geometry = new THREE.ConeGeometry(); // ConeGeometry(radius : Float, height : Float, radialSegments : Integer, heightSegments : Integer, openEnded : Boolean, thetaStart : Float, thetaLength : Float)
+    // const geometry = new THREE.CylinderGeometry(); // CylinderGeometry(radiusTop : Float, radiusBottom : Float, height : Float, radialSegments : Integer, heightSegments : Integer, openEnded : Boolean, thetaStart : Float, thetaLength : Float)
+    // const geometry = new THREE.DodecahedronGeometry(); // DodecahedronGeometry(radius : Float, detail : Integer)
+    // const geometry = new THREE.IcosahedronGeometry(1, 1); // IcosahedronGeometry(radius : Float, detail : Integer)
+    // const geometry = new THREE.OctahedronGeometry(); // OctahedronGeometry(radius : Float, detail : Integer)
+    // const geometry = new THREE.PlaneGeometry(); // PlaneGeometry(width : Float, height : Float, widthSegments : Integer, heightSegments : Integer)
+    // const geometry = new THREE.RingGeometry(); // RingGeometry(innerRadius : Float, outerRadius : Float, thetaSegments : Integer, phiSegments : Integer, thetaStart : Float, thetaLength : Float)
+    // const geometry = new THREE.SphereGeometry(1, 72, 36); // SphereGeometry(radius : Float, widthSegments : Integer, heightSegments : Integer, phiStart : Float, phiLength : Float, thetaStart : Float, thetaLength : Float)
+    // const geometry = new THREE.TetrahedronGeometry(); // TetrahedronGeometry(radius : Float, detail : Integer)
+    // const geometry = new THREE.TorusGeometry(); // TorusGeometry(radius : Float, tube : Float, radialSegments : Integer, tubularSegments : Integer, arc : Float)
+    // const geometry = new THREE.TorusKnotGeometry(); // TorusKnotGeometry(radius : Float, tube : Float, tubularSegments : Integer, radialSegments : Integer, p : Integer, q : Integer)
+
     const cube = new THREE.Mesh(geometry, material);
 
     cube.userData.render = (time, tick) => {
@@ -18112,11 +18184,7 @@ class Example01 {
       cube.rotation.y += 0.01;
     };
 
-    scene.add(cube); // LISTENERS
-
-    this.addListeners(); // ANIMATION LOOP
-
-    this.animate();
+    scene.add(cube);
   }
 
   addListeners() {
@@ -18169,7 +18237,7 @@ class Example01 {
 
 exports.default = Example01;
 
-},{"../colors/colors":202}],206:[function(require,module,exports){
+},{"../colors/colors":202,"../helper/helper":209}],206:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18197,11 +18265,7 @@ class Example01 {
     camera.target = new THREE.Vector3();
     camera.zoom = 1;
     camera.updateProjectionMatrix();
-    scene.add(camera); // LIGHT
-
-    const light = new THREE.HemisphereLight((0, _colors.randomColor)(), (0, _colors.randomColor)(), 0.65);
-    light.position.set(0, 10, 0);
-    scene.add(light); // RENDERER
+    scene.add(camera); // RENDERER
 
     const renderer = this.renderer = new THREE.WebGLRenderer({
       antialias: true // alpha: true,
@@ -18211,40 +18275,118 @@ class Example01 {
     });
     renderer.setClearColor((0, _colors.randomColor)(), 1);
     renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer.domElement); // MODEL (FBX LOADER)
+    container.appendChild(renderer.domElement); // LISTENERS
+
+    this.addListeners(); // ANIMATION LOOP
+
+    this.animate(); // LIGHT
+
+    const light = new THREE.HemisphereLight((0, _colors.randomColor)(), (0, _colors.randomColor)(), 0.65);
+    light.position.set(0, 10, 0);
+    scene.add(light); // const key = 'latte-corpo';
+
+    const key = 'gel-mousse-doccia'; // MATERIAL
+
+    const materialCorpo = new THREE.MeshStandardMaterial({
+      name: 'corpo',
+      color: 0xf4f4f6,
+      roughness: 0.45,
+      metalness: 0.01,
+      map: _texture.default.load(`./three/models/${key}/${key}.jpg`, renderer),
+      envMapIntensity: 1.5,
+      side: THREE.FrontSide
+    });
+    const materialWhite = new THREE.MeshStandardMaterial({
+      name: 'white',
+      color: 0xf4f4f6,
+      roughness: 0.45,
+      metalness: 0.01,
+      envMapIntensity: 1.5,
+      side: THREE.FrontSide
+    });
+    const materialBlack = new THREE.MeshStandardMaterial({
+      name: 'black',
+      color: 0x222222,
+      roughness: 0.05,
+      metalness: 0.05,
+      envMapIntensity: 1.5,
+      side: THREE.FrontSide
+    });
+    const materialTransparent = new THREE.MeshStandardMaterial({
+      name: 'transparent',
+      color: 0xaaaaaa,
+      roughness: 0.05,
+      metalness: 0.05,
+      opacity: 0.4,
+      transparent: true,
+      alphaTest: 0.3,
+      envMapIntensity: 3,
+      side: THREE.FrontSide
+    }); // MODEL (FBX LOADER)
 
     const fbxLoader = new THREE.FBXLoader();
-    fbxLoader.load('./three/models/latte-corpo/latte-corpo.fbx', object => {
-      const materialCorpo = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: 0.3,
-        metalness: 0.03,
-        map: _texture.default.load('./three/models/latte-corpo/latte-corpo.jpg', renderer)
-      });
-      const materialTappo = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: 0.3,
-        metalness: 0.03
-      });
-      object.traverse(child => {
-        if (child instanceof THREE.Mesh) {
-          if (child.name === 'corpo') {
-            child.material = materialCorpo;
-          } else {
-            child.material = materialTappo;
-          } // console.log(child.name, child.material);
+    fbxLoader.load(`./three/models/${key}/${key}.fbx`, object => {
+      switch (key) {
+        case 'latte-corpo':
+          object.traverse(child => {
+            if (child instanceof THREE.Mesh) {
+              if (child.name === 'corpo') {
+                child.material = materialCorpo;
+              } else {
+                child.material = materialWhite;
+              } // console.log(child.name, child.material);
 
-        }
-      });
+            }
+          });
+          object.scale.set(0.3, 0.3, 0.3);
 
-      object.userData.render = (time, tick) => {
-        object.scale.set(0.3, 0.3, 0.3);
-        object.rotation.x = Math.PI / 180 * 15;
-        object.rotation.y += 0.01;
-      };
+          object.userData.render = (time, tick) => {
+            object.rotation.x = Math.PI / 180 * 15;
+            object.rotation.y += 0.01;
+          };
 
-      _texture.default.loadEquirectangularToCube('./three/environment/environment-10.jpg', renderer, (texture, backgroundTexture) => {
-        _texture.default.setEnvMap(texture, materialCorpo, materialTappo);
+          break;
+
+        case 'gel-mousse-doccia':
+          object.traverse(child => {
+            if (child instanceof THREE.Mesh) {
+              switch (child.name) {
+                case 'spray_bottle':
+                  child.renderOrder = 1;
+                  child.material = materialCorpo;
+                  break;
+
+                case 'spray':
+                case 'cilindro1':
+                case 'cilindro2':
+                  child.renderOrder = 2;
+                  child.material = materialBlack;
+                  break;
+
+                case 'tappo':
+                  child.renderOrder = 3;
+                  child.material = materialTransparent;
+                  break;
+
+                default:
+                  child.renderOrder = 1;
+                  child.material = materialWhite;
+              } // console.log(child.name, child.material);
+
+            }
+          });
+          object.scale.set(0.2, 0.2, 0.2);
+
+          object.userData.render = (time, tick) => {
+            object.rotation.x = Math.PI / 180 * 15;
+            object.rotation.y -= 0.01;
+          };
+
+          break;
+      }
+
+      _texture.default.loadEquirectangularToCube('./three/environment/environment-07.jpg', renderer, (texture, backgroundTexture) => {
+        _texture.default.setEnvMap(texture, materialCorpo, materialWhite, materialBlack, materialTransparent);
 
         scene.add(object);
       }); // scene.add(object);
@@ -18253,11 +18395,7 @@ class Example01 {
       console.log('fbx progress', Math.round(xhr.loaded / xhr.total * 100) + '%');
     }, error => {
       console.log('fbx loader error', error);
-    }); // LISTENERS
-
-    this.addListeners(); // ANIMATION LOOP
-
-    this.animate();
+    });
   }
 
   addListeners() {
@@ -18310,7 +18448,7 @@ class Example01 {
 
 exports.default = Example01;
 
-},{"../colors/colors":202,"../texture/texture":218}],207:[function(require,module,exports){
+},{"../colors/colors":202,"../texture/texture":219}],207:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18375,7 +18513,7 @@ class Example03 {
 
 exports.default = Example03;
 
-},{"../colors/colors":202,"../ease/ease":204,"../model/model":211,"../title/title":220,"../world/world":221}],208:[function(require,module,exports){
+},{"../colors/colors":202,"../ease/ease":204,"../model/model":212,"../title/title":221,"../world/world":222}],208:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18445,7 +18583,54 @@ class Example04 {
 
 exports.default = Example04;
 
-},{"../picture/picture.shader":213,"../plane/plane":214,"../title/title":220,"../world/world":221}],209:[function(require,module,exports){
+},{"../picture/picture.shader":214,"../plane/plane":215,"../title/title":221,"../world/world":222}],209:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _colors = require("../colors/colors");
+
+/* jshint esversion: 6 */
+class Helper {
+  static make(object) {
+    let helper;
+    const color = 0xff0000; // const color = Helper.randomColor();
+
+    if (object instanceof THREE.DirectionalLight) {
+      helper = new THREE.DirectionalLightHelper(object, 0.5, color);
+    }
+
+    if (object instanceof THREE.HemisphereLight) {
+      helper = new THREE.HemisphereLightHelper(object, 0.5, color);
+    }
+
+    if (object instanceof THREE.PointLight) {
+      helper = new THREE.PointLightHelper(object, 0.2, color);
+    }
+
+    if (object instanceof THREE.RectAreaLight) {
+      helper = new THREE.RectAreaLightHelper(object, color);
+    }
+
+    if (object instanceof THREE.SpotLight) {
+      helper = new THREE.SpotLightHelper(object, color);
+    }
+
+    return helper;
+  }
+
+  static randomColor() {
+    return (0, _colors.randomColor)();
+  }
+
+}
+
+exports.default = Helper;
+
+},{"../colors/colors":202}],210:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18470,7 +18655,7 @@ class Lights extends THREE.Group {
 
 exports.default = Lights;
 
-},{}],210:[function(require,module,exports){
+},{}],211:[function(require,module,exports){
 "use strict";
 
 var _example = _interopRequireDefault(require("./examples/example-01"));
@@ -18489,7 +18674,7 @@ window.Example02 = _example2.default;
 window.Example03 = _example3.default;
 window.Example04 = _example4.default;
 
-},{"./examples/example-01":205,"./examples/example-02":206,"./examples/example-03":207,"./examples/example-04":208}],211:[function(require,module,exports){
+},{"./examples/example-01":205,"./examples/example-02":206,"./examples/example-03":207,"./examples/example-04":208}],212:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18599,7 +18784,7 @@ class Model {
 
 exports.default = Model;
 
-},{"../colors/colors":202,"../dom/dom.service":203,"../ease/ease":204}],212:[function(require,module,exports){
+},{"../colors/colors":202,"../dom/dom.service":203,"../ease/ease":204}],213:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18705,7 +18890,7 @@ class Picture {
 
 exports.default = Picture;
 
-},{"../dom/dom.service":203,"../plane/plane":214,"../texture/texture":218}],213:[function(require,module,exports){
+},{"../dom/dom.service":203,"../plane/plane":215,"../texture/texture":219}],214:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18860,7 +19045,7 @@ class PictureShader extends _picture.default {
 
 exports.default = PictureShader;
 
-},{"../plane/plane":214,"../texture/texture":218,"./picture":212}],214:[function(require,module,exports){
+},{"../plane/plane":215,"../texture/texture":219,"./picture":213}],215:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18965,7 +19150,7 @@ class Plane {
 
 exports.default = Plane;
 
-},{"../colors/colors":202,"../dom/dom.service":203}],215:[function(require,module,exports){
+},{"../colors/colors":202,"../dom/dom.service":203}],216:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19096,7 +19281,7 @@ class Rect {
 
 exports.default = Rect;
 
-},{}],216:[function(require,module,exports){
+},{}],217:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19129,7 +19314,7 @@ class Renderer extends THREE.WebGLRenderer {
 
 exports.default = Renderer;
 
-},{}],217:[function(require,module,exports){
+},{}],218:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19149,7 +19334,7 @@ class Scene extends THREE.Scene {
 
 exports.default = Scene;
 
-},{}],218:[function(require,module,exports){
+},{}],219:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19243,7 +19428,7 @@ class Texture {
 
 exports.default = Texture;
 
-},{"rxjs":2,"rxjs/operators":200}],219:[function(require,module,exports){
+},{"rxjs":2,"rxjs/operators":200}],220:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19297,7 +19482,7 @@ class Emittable {
 
 exports.default = Emittable;
 
-},{}],220:[function(require,module,exports){
+},{}],221:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19357,7 +19542,7 @@ class Title {
 
 exports.default = Title;
 
-},{"../dom/dom.service":203,"../ease/ease":204}],221:[function(require,module,exports){
+},{"../dom/dom.service":203,"../ease/ease":204}],222:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19486,5 +19671,5 @@ class World extends _emittable.default {
 
 exports.default = World;
 
-},{"../camera/camera":201,"../lights/lights":209,"../rect/rect":215,"../renderer/renderer":216,"../scene/scene":217,"../threejs/interactive/emittable":219}]},{},[210]);
+},{"../camera/camera":201,"../lights/lights":210,"../rect/rect":216,"../renderer/renderer":217,"../scene/scene":218,"../threejs/interactive/emittable":220}]},{},[211]);
 //# sourceMappingURL=main.js.map

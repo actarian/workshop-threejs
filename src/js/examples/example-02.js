@@ -22,11 +22,6 @@ export default class Example01 {
 		camera.updateProjectionMatrix();
 		scene.add(camera);
 
-		// LIGHT
-		const light = new THREE.HemisphereLight(randomColor(), randomColor(), 0.65);
-		light.position.set(0, 10, 0);
-		scene.add(light);
-
 		// RENDERER
 		const renderer = this.renderer = new THREE.WebGLRenderer({
 			antialias: true,
@@ -38,37 +33,113 @@ export default class Example01 {
 		renderer.setPixelRatio(window.devicePixelRatio);
 		container.appendChild(renderer.domElement);
 
+		// LISTENERS
+		this.addListeners();
+
+		// ANIMATION LOOP
+		this.animate();
+
+		// LIGHT
+		const light = new THREE.HemisphereLight(randomColor(), randomColor(), 0.65);
+		light.position.set(0, 10, 0);
+		scene.add(light);
+
+		// const key = 'latte-corpo';
+		const key = 'gel-mousse-doccia';
+
+		// MATERIAL
+		const materialCorpo = new THREE.MeshStandardMaterial({
+			name: 'corpo',
+			color: 0xf4f4f6,
+			roughness: 0.45,
+			metalness: 0.01,
+			map: Texture.load(`./three/models/${key}/${key}.jpg`, renderer),
+			envMapIntensity: 1.5,
+			side: THREE.FrontSide,
+		});
+		const materialWhite = new THREE.MeshStandardMaterial({
+			name: 'white',
+			color: 0xf4f4f6,
+			roughness: 0.45,
+			metalness: 0.01,
+			envMapIntensity: 1.5,
+			side: THREE.FrontSide,
+		});
+		const materialBlack = new THREE.MeshStandardMaterial({
+			name: 'black',
+			color: 0x222222,
+			roughness: 0.05,
+			metalness: 0.05,
+			envMapIntensity: 1.5,
+			side: THREE.FrontSide,
+		});
+		const materialTransparent = new THREE.MeshStandardMaterial({
+			name: 'transparent',
+			color: 0xaaaaaa,
+			roughness: 0.05,
+			metalness: 0.05,
+			opacity: 0.4,
+			transparent: true,
+			alphaTest: 0.3,
+			envMapIntensity: 3,
+			side: THREE.FrontSide,
+		});
+
 		// MODEL (FBX LOADER)
 		const fbxLoader = new THREE.FBXLoader();
-		fbxLoader.load('./three/models/latte-corpo/latte-corpo.fbx', (object) => {
-				const materialCorpo = new THREE.MeshStandardMaterial({
-					color: 0xffffff,
-					roughness: 0.3,
-					metalness: 0.03,
-					map: Texture.load('./three/models/latte-corpo/latte-corpo.jpg', renderer),
-				});
-				const materialTappo = new THREE.MeshStandardMaterial({
-					color: 0xffffff,
-					roughness: 0.3,
-					metalness: 0.03,
-				});
-				object.traverse((child) => {
-					if (child instanceof THREE.Mesh) {
-						if (child.name === 'corpo') {
-							child.material = materialCorpo;
-						} else {
-							child.material = materialTappo;
-						}
-						// console.log(child.name, child.material);
-					}
-				});
-				object.userData.render = (time, tick) => {
-					object.scale.set(0.3, 0.3, 0.3);
-					object.rotation.x = Math.PI / 180 * 15;
-					object.rotation.y += 0.01;
-				};
-				Texture.loadEquirectangularToCube('./three/environment/environment-10.jpg', renderer, (texture, backgroundTexture) => {
-					Texture.setEnvMap(texture, materialCorpo, materialTappo);
+		fbxLoader.load(`./three/models/${key}/${key}.fbx`, (object) => {
+				switch (key) {
+					case 'latte-corpo':
+						object.traverse((child) => {
+							if (child instanceof THREE.Mesh) {
+								if (child.name === 'corpo') {
+									child.material = materialCorpo;
+								} else {
+									child.material = materialWhite;
+								}
+								// console.log(child.name, child.material);
+							}
+						});
+						object.scale.set(0.3, 0.3, 0.3);
+						object.userData.render = (time, tick) => {
+							object.rotation.x = Math.PI / 180 * 15;
+							object.rotation.y += 0.01;
+						};
+						break;
+					case 'gel-mousse-doccia':
+						object.traverse((child) => {
+							if (child instanceof THREE.Mesh) {
+								switch (child.name) {
+									case 'spray_bottle':
+										child.renderOrder = 1;
+										child.material = materialCorpo;
+										break;
+									case 'spray':
+									case 'cilindro1':
+									case 'cilindro2':
+										child.renderOrder = 2;
+										child.material = materialBlack;
+										break;
+									case 'tappo':
+										child.renderOrder = 3;
+										child.material = materialTransparent;
+										break;
+									default:
+										child.renderOrder = 1;
+										child.material = materialWhite;
+								}
+								// console.log(child.name, child.material);
+							}
+						});
+						object.scale.set(0.2, 0.2, 0.2);
+						object.userData.render = (time, tick) => {
+							object.rotation.x = Math.PI / 180 * 15;
+							object.rotation.y -= 0.01;
+						};
+						break;
+				}
+				Texture.loadEquirectangularToCube('./three/environment/environment-07.jpg', renderer, (texture, backgroundTexture) => {
+					Texture.setEnvMap(texture, materialCorpo, materialWhite, materialBlack, materialTransparent);
 					scene.add(object);
 				});
 				// scene.add(object);
@@ -81,11 +152,6 @@ export default class Example01 {
 			}
 		);
 
-		// LISTENERS
-		this.addListeners();
-
-		// ANIMATION LOOP
-		this.animate();
 	}
 
 	addListeners() {

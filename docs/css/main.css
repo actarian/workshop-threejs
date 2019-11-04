@@ -1,9 +1,13 @@
+@import url("https://fonts.googleapis.com/css?family=Poppins:400,600&display=swap");
+/*
 @font-face {
-  font-family: 'Butler';
-  src: url("../fonts/butler_bold-webfont.woff2") format("woff2"), url("../fonts/butler_bold-webfont.woff") format("woff");
-  font-weight: 800;
-  font-style: normal; }
-
+	font-family: 'Butler';
+	src: url('../fonts/butler_bold-webfont.woff2') format('woff2'),
+		url('../fonts/butler_bold-webfont.woff') format('woff');
+	font-weight: 800;
+	font-style: normal;
+}
+*/
 * {
   -webkit-box-sizing: border-box;
           box-sizing: border-box; }
@@ -263,7 +267,6 @@ ng-transclude {
       color: #1e2849; }
 
 html:not(.has-scroll-init) {
-  cursor: wait;
   overflow: hidden; }
 
 html.has-scroll-smooth {
@@ -3011,7 +3014,14 @@ button,
   margin: 0;
   padding: 0;
   list-style: none;
-  text-align: center; }
+  text-align: center;
+  font-size: 14px; }
+  .menu--nav li {
+    min-height: 10px; }
+
+.vscode-extensions {
+  margin-top: 15px;
+  font-size: 12px; }
 
 img {
   max-width: 100%; }
