@@ -56,6 +56,7 @@ export default class Example01 {
 			map: Texture.load(`./three/models/${key}/${key}.jpg`, renderer),
 			envMapIntensity: 1.5,
 			side: THREE.FrontSide,
+			wireframe: false,
 		});
 		const materialWhite = new THREE.MeshStandardMaterial({
 			name: 'white',
@@ -64,6 +65,7 @@ export default class Example01 {
 			metalness: 0.01,
 			envMapIntensity: 1.5,
 			side: THREE.FrontSide,
+			wireframe: false,
 		});
 		const materialBlack = new THREE.MeshStandardMaterial({
 			name: 'black',
@@ -72,6 +74,7 @@ export default class Example01 {
 			metalness: 0.05,
 			envMapIntensity: 1.5,
 			side: THREE.FrontSide,
+			wireframe: false,
 		});
 		const materialTransparent = new THREE.MeshStandardMaterial({
 			name: 'transparent',
@@ -83,6 +86,7 @@ export default class Example01 {
 			alphaTest: 0.3,
 			envMapIntensity: 3,
 			side: THREE.FrontSide,
+			wireframe: false,
 		});
 
 		// MODEL (FBX LOADER)

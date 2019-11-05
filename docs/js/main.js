@@ -17109,7 +17109,7 @@ class Camera extends THREE.PerspectiveCamera {
 
 exports.default = Camera;
 
-},{"../rect/rect":216}],202:[function(require,module,exports){
+},{"../rect/rect":217}],202:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17785,7 +17785,7 @@ class DomService extends Dom {
 
 exports.default = DomService;
 
-},{"../rect/rect":216,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],204:[function(require,module,exports){
+},{"../rect/rect":217,"locomotive-scroll":1,"rxjs":2,"rxjs/internal/scheduler/animationFrame":163,"rxjs/operators":200}],204:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18069,15 +18069,20 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 /* jshint esversion: 6 */
 class Example01 {
-  constructor(container) {
-    this.container = container; // SCENE
+  constructor(node) {
+    this.node = node; // SCENE
 
     const scene = this.scene = new THREE.Scene();
     scene.background = new THREE.Color((0, _colors.randomColor)()); // scene.fog = new THREE.Fog(scene.background, 0, 50);
     // CAMERA
 
-    const camera = this.camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.01, 2000);
+    const camera = this.camera = new THREE.PerspectiveCamera(75, node.offsetWidth / node.offsetHeight, 0.01, 2000);
     camera.position.set(0, 0, 5);
+    /*
+    camera.rotation.set(0, Math.PI / 2, 0);
+    camera.scale.set(1, 1, 1);
+    */
+
     camera.target = new THREE.Vector3();
     camera.zoom = 1;
     camera.updateProjectionMatrix();
@@ -18091,7 +18096,7 @@ class Example01 {
     });
     renderer.setClearColor((0, _colors.randomColor)(), 1);
     renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer.domElement); // LISTENERS
+    node.appendChild(renderer.domElement); // LISTENERS
 
     this.addListeners(); // ANIMATION LOOP
 
@@ -18112,11 +18117,8 @@ class Example01 {
     scene.add(light);
 
     const helper = _helper.default.make(light);
-    /*
-    if (helper) {
-    	scene.add(helper);
-    }
-    */
+
+    if (helper) {} // scene.add(helper);
 
     /*
     light.userData.render = (time, tick) => {
@@ -18135,7 +18137,7 @@ class Example01 {
     /*
     const material = new THREE.MeshBasicMaterial({
     	color: randomColor(),
-    	wireframe: true
+    	wireframe: false
     });
     */
 
@@ -18147,29 +18149,29 @@ class Example01 {
     });
     */
 
-
-    const material = new THREE.MeshStandardMaterial({
-      color: (0, _colors.randomColor)(),
-      roughness: 0.01,
-      metalness: 0.4
-    });
     /*
-    const material = new THREE.MeshMatcapMaterial({
+    const material = new THREE.MeshStandardMaterial({
     	color: randomColor(),
-    	matcap: new THREE.TextureLoader().load(`./three/matcap/matcap-02.jpg`, (texture) => {
-    		console.log('texture loaded!', texture)
-    	})
+    	roughness: 0.01,
+    	metalness: 0.4,
     });
     */
-    // MODEL
 
-    const geometry = new THREE.BoxGeometry(1, 1, 1); // BoxGeometry(width : Float, height : Float, depth : Float, widthSegments : Integer, heightSegments : Integer, depthSegments : Integer)
+
+    const material = new THREE.MeshMatcapMaterial({
+      color: (0, _colors.randomColor)(),
+      matcap: new THREE.TextureLoader().load(`./three/matcap/matcap-00.jpg`, texture => {
+        console.log('texture loaded!', texture);
+      })
+    }); // MODEL
+    // const geometry = new THREE.BoxGeometry(1, 1, 1); // BoxGeometry(width : Float, height : Float, depth : Float, widthSegments : Integer, heightSegments : Integer, depthSegments : Integer)
     // const geometry = new THREE.CircleGeometry(0.3, 4, 0, 2 * Math.PI); // CircleGeometry(radius : Float, segments : Integer, thetaStart : Float, thetaLength : Float);
     // const geometry = new THREE.ConeGeometry(); // ConeGeometry(radius : Float, height : Float, radialSegments : Integer, heightSegments : Integer, openEnded : Boolean, thetaStart : Float, thetaLength : Float)
     // const geometry = new THREE.CylinderGeometry(); // CylinderGeometry(radiusTop : Float, radiusBottom : Float, height : Float, radialSegments : Integer, heightSegments : Integer, openEnded : Boolean, thetaStart : Float, thetaLength : Float)
     // const geometry = new THREE.DodecahedronGeometry(); // DodecahedronGeometry(radius : Float, detail : Integer)
     // const geometry = new THREE.IcosahedronGeometry(1, 1); // IcosahedronGeometry(radius : Float, detail : Integer)
-    // const geometry = new THREE.OctahedronGeometry(); // OctahedronGeometry(radius : Float, detail : Integer)
+
+    const geometry = new THREE.OctahedronGeometry(); // OctahedronGeometry(radius : Float, detail : Integer)
     // const geometry = new THREE.PlaneGeometry(); // PlaneGeometry(width : Float, height : Float, widthSegments : Integer, heightSegments : Integer)
     // const geometry = new THREE.RingGeometry(); // RingGeometry(innerRadius : Float, outerRadius : Float, thetaSegments : Integer, phiSegments : Integer, thetaStart : Float, thetaLength : Float)
     // const geometry = new THREE.SphereGeometry(1, 72, 36); // SphereGeometry(radius : Float, widthSegments : Integer, heightSegments : Integer, phiStart : Float, phiLength : Float, thetaStart : Float, thetaLength : Float)
@@ -18195,9 +18197,9 @@ class Example01 {
 
   resize() {
     try {
-      const container = this.container;
-      const w = container.offsetWidth;
-      const h = container.offsetHeight;
+      const node = this.node;
+      const w = node.offsetWidth;
+      const h = node.offsetHeight;
       const renderer = this.renderer;
       renderer.setSize(w, h);
       const camera = this.camera;
@@ -18294,7 +18296,8 @@ class Example01 {
       metalness: 0.01,
       map: _texture.default.load(`./three/models/${key}/${key}.jpg`, renderer),
       envMapIntensity: 1.5,
-      side: THREE.FrontSide
+      side: THREE.FrontSide,
+      wireframe: false
     });
     const materialWhite = new THREE.MeshStandardMaterial({
       name: 'white',
@@ -18302,7 +18305,8 @@ class Example01 {
       roughness: 0.45,
       metalness: 0.01,
       envMapIntensity: 1.5,
-      side: THREE.FrontSide
+      side: THREE.FrontSide,
+      wireframe: false
     });
     const materialBlack = new THREE.MeshStandardMaterial({
       name: 'black',
@@ -18310,7 +18314,8 @@ class Example01 {
       roughness: 0.05,
       metalness: 0.05,
       envMapIntensity: 1.5,
-      side: THREE.FrontSide
+      side: THREE.FrontSide,
+      wireframe: false
     });
     const materialTransparent = new THREE.MeshStandardMaterial({
       name: 'transparent',
@@ -18321,7 +18326,8 @@ class Example01 {
       transparent: true,
       alphaTest: 0.3,
       envMapIntensity: 3,
-      side: THREE.FrontSide
+      side: THREE.FrontSide,
+      wireframe: false
     }); // MODEL (FBX LOADER)
 
     const fbxLoader = new THREE.FBXLoader();
@@ -18448,7 +18454,7 @@ class Example01 {
 
 exports.default = Example01;
 
-},{"../colors/colors":202,"../texture/texture":219}],207:[function(require,module,exports){
+},{"../colors/colors":202,"../texture/texture":220}],207:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18472,14 +18478,14 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 const deg = THREE.Math.degToRad;
 
 class Example03 {
-  constructor(container) {
-    this.container = container; // RANDOM COLOR TO SECTIONS
+  constructor(node) {
+    this.node = node; // RANDOM COLOR TO SECTIONS
 
     const sections = [...document.querySelectorAll('.section')].forEach(node => {
       node.style.backgroundColor = (0, _colors.nextHex)();
     }); // WORLD
 
-    const world = new _world.default(container, world => {
+    const world = new _world.default(node, world => {
       // MODELS
       const models = [...document.querySelectorAll('[model]')].map((node, index) => {
         const model = new _model.default(node, {
@@ -18488,6 +18494,12 @@ class Example03 {
             const mesh = instance.mesh;
 
             const scroll = _ease.default.Sine.In(0.5 - Math.min(0.5, instance.getScroll()));
+            /*
+            if (index === 1) {
+            	console.log(instance.getScroll());
+            }
+            */
+
 
             mesh.rotation.x = deg(180) * scroll; // mesh.rotation.y = deg(180) * scroll;
 
@@ -18500,6 +18512,11 @@ class Example03 {
             } else {
               mesh.position.set(position.x + 6.5 * scroll, position.y, position.z);
             }
+            /*
+            mesh.position.z = -1000 * scroll;
+            mesh.material.opacity = 1 - scroll;
+            */
+
           }
         });
         return model;
@@ -18513,7 +18530,7 @@ class Example03 {
 
 exports.default = Example03;
 
-},{"../colors/colors":202,"../ease/ease":204,"../model/model":212,"../title/title":221,"../world/world":222}],208:[function(require,module,exports){
+},{"../colors/colors":202,"../ease/ease":204,"../model/model":213,"../title/title":222,"../world/world":224}],208:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18583,7 +18600,7 @@ class Example04 {
 
 exports.default = Example04;
 
-},{"../picture/picture.shader":214,"../plane/plane":215,"../title/title":221,"../world/world":222}],209:[function(require,module,exports){
+},{"../picture/picture.shader":215,"../plane/plane":216,"../title/title":222,"../world/world":224}],209:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18666,6 +18683,10 @@ var _example3 = _interopRequireDefault(require("./examples/example-03"));
 
 var _example4 = _interopRequireDefault(require("./examples/example-04"));
 
+var _menu = _interopRequireDefault(require("./menu/menu"));
+
+var _user = _interopRequireDefault(require("./user/user"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /* jshint esversion: 6 */
@@ -18673,8 +18694,57 @@ window.Example01 = _example.default;
 window.Example02 = _example2.default;
 window.Example03 = _example3.default;
 window.Example04 = _example4.default;
+const menu = new _menu.default(document.querySelector('.nav--header'));
+const user = new _user.default({
+  name: 'Daniel',
+  surname: 'Coggins'
+});
+const user2 = new _user.default();
+console.log(user.fullname);
+user.fullname = 'Massimo Carletti';
+console.log(user.fullname);
+console.log(user2.fullname);
 
-},{"./examples/example-01":205,"./examples/example-02":206,"./examples/example-03":207,"./examples/example-04":208}],212:[function(require,module,exports){
+},{"./examples/example-01":205,"./examples/example-02":206,"./examples/example-03":207,"./examples/example-04":208,"./menu/menu":212,"./user/user":223}],212:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+class MenuItem {
+  constructor(node) {
+    this.node = node;
+    this.onClick = this.onClick.bind(this);
+    node.addEventListener('click', this.onClick);
+
+    if (window.location.href.indexOf(node.getAttribute('href').replace('./', '/')) !== -1) {
+      this.node.classList.add('active');
+    }
+  }
+
+  onClick(event) {
+    event.preventDefault();
+    this.node.classList.add('active');
+    setTimeout(() => {
+      window.location.href = this.node.getAttribute('href');
+    }, 1500);
+  }
+
+}
+
+class Menu {
+  constructor(node) {
+    this.items = [...node.querySelectorAll('a')].map(value => new MenuItem(value));
+    console.log(this.items);
+  }
+
+}
+
+exports.default = Menu;
+
+},{}],213:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18784,7 +18854,7 @@ class Model {
 
 exports.default = Model;
 
-},{"../colors/colors":202,"../dom/dom.service":203,"../ease/ease":204}],213:[function(require,module,exports){
+},{"../colors/colors":202,"../dom/dom.service":203,"../ease/ease":204}],214:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -18890,7 +18960,7 @@ class Picture {
 
 exports.default = Picture;
 
-},{"../dom/dom.service":203,"../plane/plane":215,"../texture/texture":219}],214:[function(require,module,exports){
+},{"../dom/dom.service":203,"../plane/plane":216,"../texture/texture":220}],215:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19045,7 +19115,7 @@ class PictureShader extends _picture.default {
 
 exports.default = PictureShader;
 
-},{"../plane/plane":215,"../texture/texture":219,"./picture":213}],215:[function(require,module,exports){
+},{"../plane/plane":216,"../texture/texture":220,"./picture":214}],216:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19150,7 +19220,7 @@ class Plane {
 
 exports.default = Plane;
 
-},{"../colors/colors":202,"../dom/dom.service":203}],216:[function(require,module,exports){
+},{"../colors/colors":202,"../dom/dom.service":203}],217:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19281,7 +19351,7 @@ class Rect {
 
 exports.default = Rect;
 
-},{}],217:[function(require,module,exports){
+},{}],218:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19314,7 +19384,7 @@ class Renderer extends THREE.WebGLRenderer {
 
 exports.default = Renderer;
 
-},{}],218:[function(require,module,exports){
+},{}],219:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19334,7 +19404,7 @@ class Scene extends THREE.Scene {
 
 exports.default = Scene;
 
-},{}],219:[function(require,module,exports){
+},{}],220:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19428,7 +19498,7 @@ class Texture {
 
 exports.default = Texture;
 
-},{"rxjs":2,"rxjs/operators":200}],220:[function(require,module,exports){
+},{"rxjs":2,"rxjs/operators":200}],221:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19482,7 +19552,7 @@ class Emittable {
 
 exports.default = Emittable;
 
-},{}],221:[function(require,module,exports){
+},{}],222:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19542,7 +19612,43 @@ class Title {
 
 exports.default = Title;
 
-},{"../dom/dom.service":203,"../ease/ease":204}],222:[function(require,module,exports){
+},{"../dom/dom.service":203,"../ease/ease":204}],223:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+/* jshint esversion: 6 */
+class User {
+  constructor(options) {
+    this.name = 'Luca';
+    this.surname = 'Zampetti';
+
+    if (options) {
+      Object.assign(this, options);
+    }
+  }
+
+  getFullName() {
+    return `${this.name} ${this.surname}`; // return this.name + ' ' + this.surname;
+  }
+
+  get fullname() {
+    return `${this.name} ${this.surname}`; // return this.name + ' ' + this.surname;
+  }
+
+  set fullname(fullname) {
+    this.name = fullname.split(' ')[0];
+    this.surname = fullname.split(' ')[1];
+  }
+
+}
+
+exports.default = User;
+
+},{}],224:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19671,5 +19777,5 @@ class World extends _emittable.default {
 
 exports.default = World;
 
-},{"../camera/camera":201,"../lights/lights":210,"../rect/rect":216,"../renderer/renderer":217,"../scene/scene":218,"../threejs/interactive/emittable":220}]},{},[211]);
+},{"../camera/camera":201,"../lights/lights":210,"../rect/rect":217,"../renderer/renderer":218,"../scene/scene":219,"../threejs/interactive/emittable":221}]},{},[211]);
 //# sourceMappingURL=main.js.map

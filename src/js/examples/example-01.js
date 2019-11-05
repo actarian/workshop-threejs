@@ -5,9 +5,8 @@ import Helper from '../helper/helper';
 
 export default class Example01 {
 
-	constructor(container) {
-
-		this.container = container;
+	constructor(node) {
+		this.node = node;
 
 		// SCENE
 		const scene = this.scene = new THREE.Scene();
@@ -15,8 +14,12 @@ export default class Example01 {
 		// scene.fog = new THREE.Fog(scene.background, 0, 50);
 
 		// CAMERA
-		const camera = this.camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.01, 2000);
+		const camera = this.camera = new THREE.PerspectiveCamera(75, node.offsetWidth / node.offsetHeight, 0.01, 2000);
 		camera.position.set(0, 0, 5);
+		/*
+		camera.rotation.set(0, Math.PI / 2, 0);
+		camera.scale.set(1, 1, 1);
+		*/
 		camera.target = new THREE.Vector3();
 		camera.zoom = 1;
 		camera.updateProjectionMatrix();
@@ -31,7 +34,7 @@ export default class Example01 {
 		});
 		renderer.setClearColor(randomColor(), 1);
 		renderer.setPixelRatio(window.devicePixelRatio);
-		container.appendChild(renderer.domElement);
+		node.appendChild(renderer.domElement);
 
 		// LISTENERS
 		this.addListeners();
@@ -54,11 +57,9 @@ export default class Example01 {
 		scene.add(light);
 
 		const helper = Helper.make(light);
-		/*
 		if (helper) {
-			scene.add(helper);
+			// scene.add(helper);
 		}
-		*/
 
 		/*
 		light.userData.render = (time, tick) => {
@@ -77,7 +78,7 @@ export default class Example01 {
 		/*
 		const material = new THREE.MeshBasicMaterial({
 			color: randomColor(),
-			wireframe: true
+			wireframe: false
 		});
 		*/
 		/*
@@ -87,28 +88,28 @@ export default class Example01 {
 			flatShading: false,
 		});
 		*/
+		/*
 		const material = new THREE.MeshStandardMaterial({
 			color: randomColor(),
 			roughness: 0.01,
 			metalness: 0.4,
 		});
-		/*
+		*/
 		const material = new THREE.MeshMatcapMaterial({
 			color: randomColor(),
-			matcap: new THREE.TextureLoader().load(`./three/matcap/matcap-02.jpg`, (texture) => {
+			matcap: new THREE.TextureLoader().load(`./three/matcap/matcap-00.jpg`, (texture) => {
 				console.log('texture loaded!', texture)
 			})
 		});
-		*/
 
 		// MODEL
-		const geometry = new THREE.BoxGeometry(1, 1, 1); // BoxGeometry(width : Float, height : Float, depth : Float, widthSegments : Integer, heightSegments : Integer, depthSegments : Integer)
+		// const geometry = new THREE.BoxGeometry(1, 1, 1); // BoxGeometry(width : Float, height : Float, depth : Float, widthSegments : Integer, heightSegments : Integer, depthSegments : Integer)
 		// const geometry = new THREE.CircleGeometry(0.3, 4, 0, 2 * Math.PI); // CircleGeometry(radius : Float, segments : Integer, thetaStart : Float, thetaLength : Float);
 		// const geometry = new THREE.ConeGeometry(); // ConeGeometry(radius : Float, height : Float, radialSegments : Integer, heightSegments : Integer, openEnded : Boolean, thetaStart : Float, thetaLength : Float)
 		// const geometry = new THREE.CylinderGeometry(); // CylinderGeometry(radiusTop : Float, radiusBottom : Float, height : Float, radialSegments : Integer, heightSegments : Integer, openEnded : Boolean, thetaStart : Float, thetaLength : Float)
 		// const geometry = new THREE.DodecahedronGeometry(); // DodecahedronGeometry(radius : Float, detail : Integer)
 		// const geometry = new THREE.IcosahedronGeometry(1, 1); // IcosahedronGeometry(radius : Float, detail : Integer)
-		// const geometry = new THREE.OctahedronGeometry(); // OctahedronGeometry(radius : Float, detail : Integer)
+		const geometry = new THREE.OctahedronGeometry(); // OctahedronGeometry(radius : Float, detail : Integer)
 		// const geometry = new THREE.PlaneGeometry(); // PlaneGeometry(width : Float, height : Float, widthSegments : Integer, heightSegments : Integer)
 		// const geometry = new THREE.RingGeometry(); // RingGeometry(innerRadius : Float, outerRadius : Float, thetaSegments : Integer, phiSegments : Integer, thetaStart : Float, thetaLength : Float)
 		// const geometry = new THREE.SphereGeometry(1, 72, 36); // SphereGeometry(radius : Float, widthSegments : Integer, heightSegments : Integer, phiStart : Float, phiLength : Float, thetaStart : Float, thetaLength : Float)
@@ -132,9 +133,9 @@ export default class Example01 {
 
 	resize() {
 		try {
-			const container = this.container;
-			const w = container.offsetWidth;
-			const h = container.offsetHeight;
+			const node = this.node;
+			const w = node.offsetWidth;
+			const h = node.offsetHeight;
 			const renderer = this.renderer;
 			renderer.setSize(w, h);
 			const camera = this.camera;

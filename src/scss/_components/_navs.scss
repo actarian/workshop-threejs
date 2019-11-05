@@ -1,0 +1,23 @@
+.nav--header {
+	position: fixed;
+	top: 0;
+	left: 0;
+	display: flex;
+	z-index: 100;
+	list-style: none;
+	width: 100%;
+	background: white;
+	margin: 0;
+
+	a {
+		font-size: 19px;
+		padding: 0 10px;
+
+		&:hover,
+		&.active {
+			background: #76b995;
+			color: #ffffff;
+		}
+	}
+
+}

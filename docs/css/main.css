@@ -2996,6 +2996,25 @@ button,
   -webkit-animation: slide-in-blurred-top 1.5s 1s cubic-bezier(0.23, 1, 0.32, 1) infinite both;
           animation: slide-in-blurred-top 1.5s 1s cubic-bezier(0.23, 1, 0.32, 1) infinite both; }
 
+.nav--header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  z-index: 100;
+  list-style: none;
+  width: 100%;
+  background: white;
+  margin: 0; }
+  .nav--header a {
+    font-size: 19px;
+    padding: 0 10px; }
+    .nav--header a:hover, .nav--header a.active {
+      background: #76b995;
+      color: #ffffff; }
+
 .section--index {
   position: relative;
   display: -webkit-box;
