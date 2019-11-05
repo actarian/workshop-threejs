@@ -7,12 +7,18 @@ import Example04 from './examples/example-04';
 import Menu from './menu/menu';
 import User from './user/user';
 
+// threejs examples
+
 window.Example01 = Example01;
 window.Example02 = Example02;
 window.Example03 = Example03;
 window.Example04 = Example04;
 
+// menu example
+
 const menu = new Menu(document.querySelector('.nav--header'));
+
+// es6 class example
 
 const user = new User({
 	name: 'Daniel',

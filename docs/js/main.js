@@ -18690,11 +18690,14 @@ var _user = _interopRequireDefault(require("./user/user"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /* jshint esversion: 6 */
+// threejs examples
 window.Example01 = _example.default;
 window.Example02 = _example2.default;
 window.Example03 = _example3.default;
-window.Example04 = _example4.default;
-const menu = new _menu.default(document.querySelector('.nav--header'));
+window.Example04 = _example4.default; // menu example
+
+const menu = new _menu.default(document.querySelector('.nav--header')); // es6 class example
+
 const user = new _user.default({
   name: 'Daniel',
   surname: 'Coggins'
